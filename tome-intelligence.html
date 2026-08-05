@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Tome Intelligence Dashboard — Tome Collective</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --green:#0C7958;--green-dark:#084d38;--gold:#FFB515;
+  --bg:#f5f6f2;--surface:#fff;--surface2:#f0f1ec;--surface3:#e4e5e0;
+  --border:rgba(0,0,0,0.08);--border-md:rgba(0,0,0,0.13);--border-str:rgba(0,0,0,0.18);
+  --text:#18190f;--text-2:#484a40;--text-3:#787a6e;
+  --up:#059669;--dn:#dc2626;
+  --sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:8px;--r-lg:14px;
+  --crack-bg:#fef3c7;--crack-fg:#92400e;--crack-bd:#fbbf24;
+  --grade-bg:#d1fae5;--grade-fg:#064e3b;--grade-bd:#6ee7b7;
+  --hold-bg:#ede9fe;--hold-fg:#4c1d95;--hold-bd:#c4b5fd;
+  --accum-bg:#dbeafe;--accum-fg:#1e3a8a;--accum-bd:#93c5fd;
+  --skip-bg:#f1f5f9;--skip-fg:#64748b;--skip-bd:#cbd5e1;
+  --ts-e-bg:#d1fae5;--ts-e-fg:#064e3b;--ts-s-bg:#dbeafe;--ts-s-fg:#1e3a8a;
+  --ts-w-bg:#fef9c3;--ts-w-fg:#713f12;--ts-x-bg:#f1f5f9;--ts-x-fg:#64748b;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0f1009;--surface:#181910;--surface2:#1e201a;--surface3:#262820;
+  --border:rgba(255,255,255,0.07);--border-md:rgba(255,255,255,0.12);--border-str:rgba(255,255,255,0.18);
+  --text:#eaecdf;--text-2:#a8aa9c;--text-3:#6a6c60;
+  --crack-bg:#422006;--crack-fg:#fcd34d;--crack-bd:#92400e;
+  --grade-bg:#052e16;--grade-fg:#6ee7b7;--grade-bd:#064e3b;
+  --hold-bg:#1e1040;--hold-fg:#c4b5fd;--hold-bd:#4c1d95;
+  --accum-bg:#0f1f40;--accum-fg:#93c5fd;--accum-bd:#1e3a8a;
+  --skip-bg:#1e2029;--skip-fg:#94a3b8;--skip-bd:#334155;
+  --ts-e-bg:#052e16;--ts-e-fg:#6ee7b7;--ts-s-bg:#0f1f40;--ts-s-fg:#93c5fd;
+  --ts-w-bg:#2d1a00;--ts-w-fg:#fcd34d;--ts-x-bg:#1e2029;--ts-x-fg:#94a3b8;
+}}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Header */
+.hdr{background:var(--green);height:50px;display:flex;align-items:center;padding:0 1.5rem;gap:12px;position:sticky;top:0;z-index:300;}
+.hdr-logo{display:flex;align-items:center;gap:7px;text-decoration:none;}
+.hdr-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);}
+.hdr-name{font-size:14px;font-weight:600;color:#fff;letter-spacing:-0.2px;}
+.hdr-div{width:1px;height:18px;background:rgba(255,255,255,0.2);}
+.hdr-product{font-size:13px;font-weight:500;color:rgba(255,255,255,0.75);}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.hdr-pill{font-size:11px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.75);padding:3px 10px;border-radius:20px;}
+
+/* Layout */
+.wrap{max-width:1320px;margin:0 auto;padding:1.25rem 1.25rem 4rem;}
+.pg-hd{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:1rem;}
+.pg-eye{font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--green);margin-bottom:4px;}
+.pg-title{font-size:24px;font-weight:700;letter-spacing:-0.5px;}
+.pg-sub{font-size:13px;color:var(--text-3);margin-top:3px;max-width:640px;line-height:1.5;}
+.pg-meta{font-size:11px;color:var(--text-3);text-align:right;}
+.pg-meta strong{color:var(--text-2);display:block;font-size:13px;}
+
+/* Quick-sort chips */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;}
+.chip{font-family:var(--sans);font-size:13px;font-weight:600;padding:9px 18px;border-radius:10px;border:1px solid var(--border-str);background:var(--surface);color:var(--text-2);cursor:pointer;transition:all 0.12s;display:flex;align-items:center;gap:7px;}
+.chip:hover{border-color:var(--green);color:var(--green);transform:translateY(-1px);}
+.chip.active{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 2px 8px rgba(12,121,88,0.25);}
+.chip .chip-icon{font-size:15px;}
+.chip .chip-count{font-size:10px;font-weight:700;background:rgba(0,0,0,0.08);padding:2px 7px;border-radius:10px;font-family:var(--mono);}
+.chip.active .chip-count{background:rgba(255,255,255,0.2);}
+
+/* Filter bar */
+.fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:0.75rem;padding:0.7rem 0.9rem;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-lg);}
+.fgroup{display:flex;align-items:center;gap:6px;}
+.flbl{font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;}
+.seg{display:flex;gap:3px;}
+.sb{font-family:var(--sans);font-size:12px;font-weight:500;padding:5px 11px;border-radius:16px;border:0.5px solid var(--border-str);background:transparent;color:var(--text-2);cursor:pointer;transition:all 0.1s;white-space:nowrap;}
+.sb:hover{border-color:var(--green);color:var(--green);}
+.sb.active{background:var(--green);color:#fff;border-color:var(--green);}
+.fdiv{width:1px;height:22px;background:var(--border-md);}
+.sw{position:relative;min-width:150px;flex:1;max-width:220px;}
+.sw svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;}
+.sw input{width:100%;padding:6px 10px 6px 29px;border:0.5px solid var(--border-str);border-radius:var(--r);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:12px;outline:none;}
+.sw input:focus{border-color:var(--green);background:var(--surface);}
+select{padding:6px 9px;border:0.5px solid var(--border-str);border-radius:var(--r);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:12px;height:31px;outline:none;cursor:pointer;}
+select:focus{border-color:var(--green);}
+.clear-btn{font-family:var(--sans);font-size:11px;font-weight:500;color:var(--text-3);background:none;border:0.5px solid var(--border-md);border-radius:var(--r);padding:5px 10px;cursor:pointer;margin-left:auto;}
+.clear-btn:hover{border-color:var(--dn);color:var(--dn);}
+.fcount{font-size:11px;color:var(--text-3);padding:4px 9px;background:var(--surface3);border-radius:16px;white-space:nowrap;}
+
+/* Profit controls bar */
+.pbar{display:flex;align-items:center;gap:10px;margin-bottom:0.875rem;padding:0.55rem 0.9rem;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);flex-wrap:wrap;}
+.plbl{font-size:11px;font-weight:500;color:var(--text-2);}
+.fee-btn{font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border-str);background:transparent;color:var(--text-2);cursor:pointer;transition:all 0.1s;}
+.fee-btn:hover{border-color:var(--green);color:var(--green);}
+.fee-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
+input[type=range]{accent-color:var(--green);cursor:pointer;}
+.pnote{font-size:10px;color:var(--text-3);margin-left:auto;}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:1rem;}
+.stat{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:0.6rem 0.8rem;}
+.stat-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);margin-bottom:3px;}
+.stat-val{font-size:19px;font-weight:700;line-height:1;}
+.stat-sub{font-size:10px;color:var(--text-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Table */
+.tbl-outer{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
+.tbl-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:1180px;}
+thead tr{background:var(--surface2);border-bottom:0.5px solid var(--border-str);}
+th{padding:9px 10px;font-size:10px;font-weight:600;color:var(--text-3);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;letter-spacing:0.5px;text-transform:uppercase;position:sticky;top:0;background:var(--surface2);}
+th:hover,th.sorted{color:var(--text);}
+th .arr{margin-left:3px;opacity:0.3;font-size:9px;}
+th.sorted .arr{opacity:1;color:var(--green);}
+th.ns{cursor:default;}
+tbody tr{border-bottom:0.5px solid var(--border);transition:background 0.08s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface2);}
+td{padding:9px 10px;vertical-align:middle;}
+.rk{font-size:11px;font-weight:700;color:var(--text-3);text-align:center;}
+.cc{display:flex;align-items:center;gap:9px;min-width:150px;}
+.ci{width:32px;height:44px;border-radius:3px;border:0.5px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.cn{font-weight:500;font-size:12px;line-height:1.3;}
+.cs{font-size:10px;color:var(--text-3);}
+.cnum{font-family:var(--mono);font-size:9px;color:var(--text-3);}
+.gt{display:inline-block;font-size:10px;font-weight:500;padding:2px 6px;border-radius:3px;}
+.gp{background:#fff3e0;color:#8b4000;}.gl{background:#e8f0fe;color:#1a3680;}.go{background:#fce7f3;color:#831843;}
+@media(prefers-color-scheme:dark){.gp{background:#3d2000;color:#ffb566;}.gl{background:#0d1f40;color:#7ab8f5;}.go{background:#3b0020;color:#f9a8d4;}}
+.era-tag{display:inline-block;font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;background:var(--surface3);color:var(--text-3);text-transform:uppercase;letter-spacing:0.3px;}
+.sig{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;border:1px solid;white-space:nowrap;}
+.s-crack{background:var(--crack-bg);color:var(--crack-fg);border-color:var(--crack-bd);}
+.s-grade{background:var(--grade-bg);color:var(--grade-fg);border-color:var(--grade-bd);}
+.s-hold{background:var(--hold-bg);color:var(--hold-fg);border-color:var(--hold-bd);}
+.s-accum{background:var(--accum-bg);color:var(--accum-fg);border-color:var(--accum-bd);}
+.s-skip{background:var(--skip-bg);color:var(--skip-fg);border-color:var(--skip-bd);}
+.ts-pill{display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;width:38px;height:23px;border-radius:5px;font-family:var(--mono);}
+.ts-e{background:var(--ts-e-bg);color:var(--ts-e-fg);}
+.ts-s{background:var(--ts-s-bg);color:var(--ts-s-fg);}
+.ts-w{background:var(--ts-w-bg);color:var(--ts-w-fg);}
+.ts-x{background:var(--ts-x-bg);color:var(--ts-x-fg);}
+.pc{display:flex;flex-direction:column;gap:1px;}
+.pa{font-family:var(--mono);font-size:12px;font-weight:600;}
+.pl{font-size:9px;color:var(--text-3);}
+.pos{color:var(--up);}.neg{color:var(--dn);}
+.mono{font-family:var(--mono);font-size:11px;}
+.up{color:var(--up);}.dn{color:var(--dn);}.fl{color:var(--text-3);}
+.tcg-link{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;color:var(--green);text-decoration:none;padding:3px 7px;border-radius:4px;border:0.5px solid var(--green);transition:all 0.1s;white-space:nowrap;}
+.tcg-link:hover{background:var(--green);color:#fff;}
+
+/* Footer */
+.footer{text-align:center;font-size:11px;color:var(--text-3);padding:2rem 0 1rem;border-top:0.5px solid var(--border);margin-top:1.5rem;}
+.footer a{color:var(--green);text-decoration:none;}
+.disclaimer{font-size:10px;color:var(--text-3);max-width:660px;margin:0.5rem auto 0;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <a class="hdr-logo" href="https://tomecollective.com" target="_blank">
+    <div class="hdr-dot"></div><span class="hdr-name">Tome Collective</span>
+  </a>
+  <div class="hdr-div"></div>
+  <span class="hdr-product">Tome Intelligence Dashboard</span>
+  <div class="hdr-right"><span class="hdr-pill">Tome+ Exclusive</span></div>
+</header>
+
+<div class="wrap">
+
+  <div class="pg-hd">
+    <div>
+      <div class="pg-eye">Tome Collective · TCG Intelligence</div>
+      <div class="pg-title">Tome Intelligence Dashboard</div>
+      <div class="pg-sub">Every card, every signal. Crack &amp; flip arbitrage, grading upside, and long-term hold scores across Pokémon, Lorcana, and One Piece.</div>
+    </div>
+    <div class="pg-meta"><strong id="dateLabel"></strong>Sample data · live feed pending</div>
+  </div>
+
+  <!-- Quick-sort chips -->
+  <div class="chips" id="chips">
+    <button class="chip active" data-preset="holds"><span class="chip-icon">💎</span>Best Holds<span class="chip-count" id="cHolds">—</span></button>
+    <button class="chip" data-preset="cracks"><span class="chip-icon">🔨</span>Best Cracks<span class="chip-count" id="cCracks">—</span></button>
+    <button class="chip" data-preset="grades"><span class="chip-icon">🎯</span>Best Grades<span class="chip-count" id="cGrades">—</span></button>
+    <button class="chip" data-preset="movers"><span class="chip-icon">📈</span>Biggest Movers<span class="chip-count" id="cMovers">—</span></button>
+  </div>
+
+  <!-- Filters -->
+  <div class="fbar">
+    <div class="fgroup"><span class="flbl">Game</span>
+      <div class="seg" id="gameSeg">
+        <button class="sb active" data-v="">All</button>
+        <button class="sb" data-v="Pokemon">Pokémon</button>
+        <button class="sb" data-v="Lorcana">Lorcana</button>
+        <button class="sb" data-v="One Piece">One Piece</button>
+      </div>
+    </div>
+    <div class="fdiv"></div>
+    <div class="fgroup"><span class="flbl">Era</span>
+      <div class="seg" id="eraSeg">
+        <button class="sb active" data-v="">All</button>
+        <button class="sb" data-v="vintage">Vintage</button>
+        <button class="sb" data-v="modern">Modern</button>
+        <button class="sb" data-v="current">Current</button>
+      </div>
+    </div>
+    <div class="fdiv"></div>
+    <div class="fgroup"><span class="flbl">Min Price</span>
+      <div class="seg" id="priceSeg">
+        <button class="sb" data-v="1">$1</button>
+        <button class="sb active" data-v="5">$5</button>
+        <button class="sb" data-v="10">$10</button>
+        <button class="sb" data-v="25">$25</button>
+      </div>
+    </div>
+    <div class="fdiv"></div>
+    <select id="setFilter"><option value="">All Sets</option></select>
+    <select id="sigFilter">
+      <option value="">All Signals</option>
+      <option value="Crack & Flip">Crack &amp; Flip</option>
+      <option value="Grade Raw">Grade Raw</option>
+      <option value="Hold">Hold</option>
+      <option value="Accumulate">Accumulate</option>
+      <option value="Skip">Skip</option>
+    </select>
+    <div class="sw">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="search" placeholder="Card, set, or number…"/>
+    </div>
+    <span class="fcount" id="fcount">—</span>
+    <button class="clear-btn" id="clearBtn">Clear</button>
+  </div>
+
+  <!-- Profit controls -->
+  <div class="pbar">
+    <span class="plbl">PSA fee:</span>
+    <div class="seg" id="feeBtns">
+      <button class="fee-btn active" data-fee="25">Value $25</button>
+      <button class="fee-btn" data-fee="75">Regular $75</button>
+      <button class="fee-btn" data-fee="150">Express $150</button>
+    </div>
+    <span style="width:1px;height:18px;background:var(--border-md);"></span>
+    <span class="plbl">Net sale rate:</span>
+    <input type="range" id="saleSlider" min="60" max="90" value="80" step="5" style="width:100px;">
+    <span class="plbl mono" id="saleLbl" style="min-width:32px;">80%</span>
+    <span style="width:1px;height:18px;background:var(--border-md);"></span>
+    <span class="plbl">Crack vs:</span>
+    <div class="seg" id="crackSeg">
+      <button class="fee-btn active" data-v="9">PSA 9</button>
+      <button class="fee-btn" data-v="8">PSA 8</button>
+      <button class="fee-btn" data-v="best">Best</button>
+    </div>
+    <span class="pnote">eBay ~85% · TCGPlayer ~87% · Buylist ~65% · Crack yields: PSA 9→92.5% NM, PSA 8→77.5% NM</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat"><div class="stat-lbl">Showing</div><div class="stat-val" id="sTot">—</div><div class="stat-sub">after filters</div></div>
+    <div class="stat"><div class="stat-lbl">Crack targets</div><div class="stat-val" id="sCrack" style="color:var(--crack-fg)">—</div><div class="stat-sub">net positive</div></div>
+    <div class="stat"><div class="stat-lbl">Grade targets</div><div class="stat-val" id="sGrade" style="color:var(--grade-fg)">—</div><div class="stat-sub">clears fee</div></div>
+    <div class="stat"><div class="stat-lbl">Holds</div><div class="stat-val" id="sHold" style="color:var(--hold-fg)">—</div><div class="stat-sub">Tome Score 75+</div></div>
+    <div class="stat"><div class="stat-lbl">Best crack</div><div class="stat-val" id="sBC" style="color:var(--crack-fg)">—</div><div class="stat-sub" id="sBCN"></div></div>
+    <div class="stat"><div class="stat-lbl">Best grade ROI</div><div class="stat-val" id="sBG" style="color:var(--grade-fg)">—</div><div class="stat-sub" id="sBGN"></div></div>
+  </div>
+
+  <!-- Table -->
+  <div class="tbl-outer"><div class="tbl-scroll">
+    <table>
+      <thead><tr>
+        <th class="ns" style="width:30px">#</th>
+        <th data-col="name" style="width:175px">Card<span class="arr">↕</span></th>
+        <th data-col="set" style="width:130px">Set<span class="arr">↕</span></th>
+        <th data-col="num" style="width:70px">Card #<span class="arr">↕</span></th>
+        <th data-col="game" style="width:74px">Game<span class="arr">↕</span></th>
+        <th data-col="era" style="width:66px">Era<span class="arr">↕</span></th>
+        <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="arr">↓</span></th>
+        <th data-col="signal" style="width:112px">Signal<span class="arr">↕</span></th>
+        <th data-col="raw" style="width:64px">Raw NM<span class="arr">↕</span></th>
+        <th data-col="p8" style="width:58px">PSA 8<span class="arr">↕</span></th>
+        <th data-col="p9" style="width:58px">PSA 9<span class="arr">↕</span></th>
+        <th data-col="p10" style="width:62px">PSA 10<span class="arr">↕</span></th>
+        <th data-col="dispCrack" style="width:96px">Crack Profit<span class="arr">↕</span></th>
+        <th data-col="gradeProfit" style="width:100px">Grade Profit<span class="arr">↕</span></th>
+        <th data-col="gradeROI" style="width:76px">Grade ROI<span class="arr">↕</span></th>
+        <th data-col="pop10" style="width:72px">PSA 10 Pop<span class="arr">↕</span></th>
+        <th data-col="mom" style="width:66px">30d Chg<span class="arr">↕</span></th>
+        <th class="ns" style="width:80px">TCGPlayer</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div></div>
+
+  <div class="footer">
+    <div>© Tome Collective · <a href="https://tomecollective.com" target="_blank">tomecollective.com</a> · Pricing data provided by <a href="https://justtcg.com" target="_blank" rel="noopener">JustTCG</a></div>
+    <div class="disclaimer">Informational only — not investment or financial advice. Grade profit assumes a PSA 10 result; outcomes vary by card condition and centering. Cracking slabs is irreversible. Crack values apply condition haircuts (PSA 9 → ~92.5% of NM raw, PSA 8 → ~77.5%) and your selected net sale rate. Cards under $1 are excluded. Era classifications (Vintage / Modern / Current) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a>. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
+  </div>
+</div>
+
+<script>
+// ═══ CONFIG ════════════════════════════════════════════════════════════════════
+let SALE_RATE = 0.80;
+let PSA_FEE = 25;
+let CRACK_BASIS = '9';   // '9' | '8' | 'best' — which slab the Crack Profit column benchmarks
+const CRACK_YIELD_P9 = 0.925;  // cracked 9 markets as NM-/LP+
+const CRACK_YIELD_P8 = 0.775;  // cracked 8 markets as LP
+const POP_PRICE_FLOOR = 10;    // pop scoring only counts above this raw price
+const HARD_PRICE_FLOOR = 1;    // cards below this are excluded at the data layer
+
+const ERA_POP = {
+  vintage: [30, 80, 200, 400, 800],
+  modern:  [50, 150, 300, 600, 1000],
+  current: [100, 300, 600, 1200, 2500],
+};
+
+const TCG = 'https://www.tcgplayer.com/search/all/product';
+const tcgHref = (n,g) => `${TCG}?q=${encodeURIComponent(n)}&utm_source=tomecollective&utm_medium=affiliate&utm_campaign=${g.toLowerCase().replace(/\s+/g,'')}`;
+
+// ═══ SAMPLE DATA (replace with JustTCG + PriceCharting feed) ═══════════════════
+const CARDS = [
+  // Pokemon — vintage
+  {game:'Pokemon',era:'vintage',e:'🏔️',name:'Golem (Holo)',set:'Skyridge',num:'148/144',raw:725,p8:290,p9:410,p10:2900,gem:0.11,pop10:42,vel:28,mom:0.82},
+  {game:'Pokemon',era:'vintage',e:'🌀',name:'Dark Alakazam',set:'Team Rocket',num:'1/82',raw:56.88,p8:36,p9:38,p10:410,gem:0.09,pop10:310,vel:95,mom:0.51},
+  {game:'Pokemon',era:'vintage',e:'🐢',name:'Blastoise',set:'Base Set',num:'2/102',raw:116,p8:150,p9:290,p10:2400,gem:0.06,pop10:2400,vel:310,mom:0.46},
+  {game:'Pokemon',era:'vintage',e:'🦅',name:'Ho-Oh',set:'Neo Revelation',num:'7/64',raw:159,p8:120,p9:210,p10:1500,gem:0.08,pop10:185,vel:45,mom:-0.25},
+  // Pokemon — modern
+  {game:'Pokemon',era:'modern',e:'⭐',name:'Jirachi',set:'Team Magma vs Team Aqua',num:'97/97',raw:120,p8:85,p9:130,p10:900,gem:0.12,pop10:88,vel:42,mom:0.50},
+  {game:'Pokemon',era:'modern',e:'🐟',name:'Gyarados',set:'Deoxys',num:'8/107',raw:73.50,p8:44,p9:52,p10:520,gem:0.10,pop10:155,vel:68,mom:0.44},
+  {game:'Pokemon',era:'modern',e:'🪨',name:'Kabutops ex',set:'Sandstorm',num:'97/100',raw:61.57,p8:52,p9:88,p10:640,gem:0.09,pop10:72,vel:18,mom:-0.32},
+  {game:'Pokemon',era:'modern',e:'👊',name:'Marshadow & Machamp GX',set:'Unbroken Bonds',num:'199/214',raw:155,p8:98,p9:132,p10:610,gem:0.18,pop10:62,vel:14,mom:-0.23},
+  // Pokemon — current
+  {game:'Pokemon',era:'current',e:'🔥',name:'Charizard ex',set:'Obsidian Flames',num:'215/197',raw:34,p8:19,p9:21,p10:177,gem:0.34,pop10:620,vel:180,mom:0.12},
+  {game:'Pokemon',era:'current',e:'🌸',name:'Mew VMAX (Alt Art)',set:'Fusion Strike',num:'269/264',raw:28,p8:14,p9:17,p10:134,gem:0.41,pop10:480,vel:260,mom:0.04},
+  {game:'Pokemon',era:'current',e:'🐉',name:'Rayquaza VMAX (Alt Art)',set:'Evolving Skies',num:'218/203',raw:95,p8:110,p9:180,p10:874,gem:0.16,pop10:195,vel:88,mom:0.31},
+  {game:'Pokemon',era:'current',e:'🌑',name:'Umbreon VMAX (Alt Art)',set:'Evolving Skies',num:'214/203',raw:120,p8:155,p9:220,p10:816,gem:0.21,pop10:245,vel:112,mom:0.22},
+  {game:'Pokemon',era:'current',e:'⚡',name:'Pikachu VMAX (Rainbow)',set:'Vivid Voltage',num:'188/185',raw:48,p8:38,p9:58,p10:403,gem:0.22,pop10:820,vel:140,mom:0.18},
+  {game:'Pokemon',era:'current',e:'🔥',name:'Charizard ex (Spec. Ill.)',set:'Paldean Fates',num:'90/91',raw:55,p8:88,p9:120,p10:358,gem:0.28,pop10:340,vel:220,mom:0.15},
+  {game:'Pokemon',era:'current',e:'⭐',name:'Eevee (Gold)',set:'Crown Zenith',num:'GG35/GG70',raw:12,p8:9,p9:15,p10:70,gem:0.30,pop10:560,vel:310,mom:0.09},
+  {game:'Pokemon',era:'current',e:'⚡',name:'Miraidon ex (Spec. Ill.)',set:'Scarlet & Violet',num:'253/198',raw:18,p8:28,p9:42,p10:58,gem:0.52,pop10:1400,vel:195,mom:0.02},
+  // Lorcana — current
+  {game:'Lorcana',era:'current',e:'🔮',name:'Sorcerer Mickey (Enchanted)',set:'The First Chapter',num:'35/204',raw:22,p8:78,p9:90,p10:319,gem:0.13,pop10:42,vel:38,mom:0.35},
+  {game:'Lorcana',era:'current',e:'🐉',name:'Maleficent (Enchanted)',set:'The First Chapter',num:'29/204',raw:15,p8:48,p9:65,p10:192,gem:0.15,pop10:28,vel:32,mom:0.41},
+  {game:'Lorcana',era:'current',e:'❄️',name:'Elsa — Spirit of Winter',set:'The First Chapter',num:'43/204',raw:8,p8:7,p9:10,p10:90,gem:0.18,pop10:180,vel:95,mom:0.22},
+  {game:'Lorcana',era:'current',e:'🦁',name:'Simba — Protective Cub',set:'The First Chapter',num:'105/204',raw:5,p8:3.20,p9:4.50,p10:39,gem:0.24,pop10:210,vel:120,mom:0.09},
+  {game:'Lorcana',era:'current',e:'🪝',name:'Maui — Hero to All',set:'Rise of the Floodborn',num:'132/204',raw:9,p8:8,p9:12,p10:55,gem:0.31,pop10:95,vel:88,mom:0.07},
+  {game:'Lorcana',era:'current',e:'🔥',name:'Hades — Lord of the Dead',set:'Rise of the Floodborn',num:'44/204',raw:7,p8:12,p9:18,p10:31,gem:0.50,pop10:280,vel:105,mom:-0.06},
+  {game:'Lorcana',era:'current',e:'📚',name:'Belle — Strange but Special',set:'Into the Inklands',num:'7/204',raw:6,p8:11,p9:16,p10:32,gem:0.38,pop10:190,vel:72,mom:0.01},
+  // One Piece — current
+  {game:'One Piece',era:'current',e:'⚔️',name:'Monkey D. Luffy (Alt Art)',set:'Romance Dawn',num:'OP01-060',raw:45,p8:38,p9:52,p10:280,gem:0.20,pop10:88,vel:65,mom:0.28},
+  {game:'One Piece',era:'current',e:'🌊',name:'Shanks (Secret Rare)',set:'Romance Dawn',num:'OP01-120',raw:120,p8:82,p9:88,p10:580,gem:0.14,pop10:42,vel:40,mom:0.35},
+  {game:'One Piece',era:'current',e:'🦊',name:'Nico Robin (Alt Art)',set:'Paramount War',num:'OP02-088',raw:28,p8:24,p9:30,p10:140,gem:0.25,pop10:72,vel:88,mom:0.19},
+  {game:'One Piece',era:'current',e:'🔱',name:'Whitebeard (Leader)',set:'Paramount War',num:'OP02-001',raw:18,p8:14,p9:16,p10:75,gem:0.32,pop10:145,vel:110,mom:-0.12},
+  {game:'One Piece',era:'current',e:'⚡',name:'Trafalgar Law (Secret)',set:'Pillars of Strength',num:'OP03-099',raw:35,p8:28,p9:32,p10:195,gem:0.18,pop10:52,vel:55,mom:0.22},
+].filter(c => c.raw >= HARD_PRICE_FLOOR);
+
+// ═══ SCORING ═══════════════════════════════════════════════════════════════════
+function tsPop(pop, era, raw) {
+  if (raw < POP_PRICE_FLOOR) return 40;
+  const t = ERA_POP[era] || ERA_POP.modern;
+  return pop<t[0]?100:pop<t[1]?85:pop<t[2]?70:pop<t[3]?50:pop<t[4]?30:15;
+}
+const tsMult = m=>m>=10?100:m>=7?85:m>=5?70:m>=3?50:m>=2?30:10;
+const tsMom  = m=>m>=.20?100:m>=.10?80:m>=.05?60:m>=-.05?40:m>=-.15?20:5;
+const tsEnt  = p=>p<5?100:p<15?80:p<40?60:p<100?40:p<250?20:5;
+
+function compute(r) {
+  const cv9 = r.raw * CRACK_YIELD_P9 * SALE_RATE;
+  const cv8 = r.raw * CRACK_YIELD_P8 * SALE_RATE;
+  const crackP9 = parseFloat((cv9 - r.p9).toFixed(2));
+  const crackP8 = parseFloat((cv8 - r.p8).toFixed(2));
+  const bestCrack = Math.max(crackP8, crackP9);
+  const crackFrom = bestCrack === crackP8 ? '8' : '9';
+  const gradeProfit = parseFloat(((r.p10 * SALE_RATE) - r.raw - PSA_FEE).toFixed(2));
+  const gradeROI = r.raw > 0 ? parseFloat((gradeProfit / r.raw * 100).toFixed(1)) : 0;
+  const mult = r.p10 / r.raw;
+
+  // Four-factor Tome Score (v2): velocity removed until a real sales-data
+  // source (eBay API) is integrated. JustTCG provides pricing only.
+  // Momentum uses the 30d window (most stable field JustTCG provides).
+  const tomeScore = Math.round(
+    tsPop(r.pop10, r.era, r.raw) * 0.35 +
+    tsMult(mult) * 0.25 +
+    tsMom(r.mom) * 0.25 +
+    tsEnt(r.raw) * 0.15
+  );
+
+  let signal = 'Skip';
+  if (dispCrack > 0) signal = 'Crack & Flip';
+  else if (gradeProfit > 0) signal = 'Grade Raw';
+  else if (tomeScore >= 75) signal = 'Hold';
+  else if (tomeScore >= 55) signal = 'Accumulate';
+
+  // Column display follows the selected crack basis
+  const dispCrack = CRACK_BASIS==='8' ? crackP8 : CRACK_BASIS==='9' ? crackP9 : bestCrack;
+  const dispFrom  = CRACK_BASIS==='8' ? '8' : CRACK_BASIS==='9' ? '9' : crackFrom;
+  return {...r, crackP8, crackP9, bestCrack, crackFrom, dispCrack, dispFrom, gradeProfit, gradeROI,
+          mult:parseFloat(mult.toFixed(1)), tomeScore, signal};
+}
+
+// ═══ STATE ═════════════════════════════════════════════════════════════════════
+let DATA = CARDS.map(compute);
+let gameF='', eraF='', setF='', sigF='', searchF='', minPrice=5;
+let sortCol='tomeScore', sortDir=-1, activePreset='holds';
+
+const PRESETS = {
+  holds:  {col:'tomeScore',   dir:-1, sig:''},
+  cracks: {col:'dispCrack',   dir:-1, sig:''},
+  grades: {col:'gradeROI',    dir:-1, sig:''},
+  movers: {col:'mom',         dir:-1, sig:''},
+};
+
+// ═══ FILTER / SORT ═════════════════════════════════════════════════════════════
+function getFiltered() {
+  return DATA.filter(c => {
+    if (c.raw < minPrice) return false;
+    if (gameF && c.game !== gameF) return false;
+    if (eraF && c.era !== eraF) return false;
+    if (setF && c.set !== setF) return false;
+    if (sigF && c.signal !== sigF) return false;
+    if (searchF) {
+      const q = searchF.toLowerCase();
+      if (!c.name.toLowerCase().includes(q) && !c.set.toLowerCase().includes(q) && !c.num.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+const getSorted = a => [...a].sort((x,y) => {
+  const av=x[sortCol], bv=y[sortCol];
+  return typeof av==='string' ? sortDir*av.localeCompare(bv) : sortDir*(av-bv);
+});
+
+// ═══ RENDER ════════════════════════════════════════════════════════════════════
+const f$ = n => (n<0?'-$':'$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const fPct = n => (n>=0?'+':'')+((n||0)*100).toFixed(0)+'%';
+const momCls = n => n>.05?'up':n<-.05?'dn':'fl';
+const pCls = n => n>0?'pos':'neg';
+const tsCls = s => s>=75?'ts-e':s>=55?'ts-s':s>=35?'ts-w':'ts-x';
+const gameCls = g => g==='Pokemon'?'gp':g==='Lorcana'?'gl':'go';
+const SIG = {
+  'Crack & Flip':{c:'s-crack',i:'🔨'},'Grade Raw':{c:'s-grade',i:'🎯'},
+  'Hold':{c:'s-hold',i:'💎'},'Accumulate':{c:'s-accum',i:'📈'},'Skip':{c:'s-skip',i:'—'},
+};
+
+function updateChipCounts() {
+  const base = DATA.filter(c => c.raw >= minPrice);
+  document.getElementById('cHolds').textContent  = base.filter(c=>c.tomeScore>=75).length;
+  document.getElementById('cCracks').textContent = base.filter(c=>c.dispCrack>0).length;
+  document.getElementById('cGrades').textContent = base.filter(c=>c.gradeProfit>0).length;
+  document.getElementById('cMovers').textContent = base.filter(c=>Math.abs(c.mom)>=0.20).length;
+}
+
+function updateStats(rows) {
+  document.getElementById('sTot').textContent = rows.length;
+  const cracks = rows.filter(c=>c.dispCrack>0), grades = rows.filter(c=>c.gradeProfit>0);
+  const holds = rows.filter(c=>c.tomeScore>=75);
+  document.getElementById('sCrack').textContent = cracks.length;
+  document.getElementById('sGrade').textContent = grades.length;
+  document.getElementById('sHold').textContent = holds.length;
+  const bc = cracks.sort((a,b)=>b.dispCrack-a.dispCrack)[0];
+  const bg = grades.sort((a,b)=>b.gradeROI-a.gradeROI)[0];
+  document.getElementById('sBC').textContent = bc?f$(bc.dispCrack):'—';
+  document.getElementById('sBCN').textContent = bc?bc.name:'';
+  document.getElementById('sBG').textContent = bg?'+'+bg.gradeROI+'%':'—';
+  document.getElementById('sBGN').textContent = bg?bg.name:'';
+  document.getElementById('fcount').textContent = rows.length + ' cards';
+}
+
+function render() {
+  const rows = getSorted(getFiltered());
+  updateStats(rows);
+  updateChipCounts();
+  const tbody = document.getElementById('tbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px">No cards match your filters. Try lowering the minimum price or clearing filters.</td></tr>'; return; }
+  tbody.innerHTML = rows.map((c,i) => {
+    const s = SIG[c.signal];
+    return `<tr>
+      <td class="rk">${i+1}</td>
+      <td><div class="cc"><div class="ci">${c.e}</div><div><div class="cn">${c.name}</div><div class="cs">${c.set}</div></div></div></td>
+      <td style="font-size:11px;color:var(--text-2)">${c.set}</td>
+      <td class="mono" style="color:var(--text-3)">${c.num}</td>
+      <td><span class="gt ${gameCls(c.game)}">${c.game}</span></td>
+      <td><span class="era-tag">${c.era}</span></td>
+      <td><span class="ts-pill ${tsCls(c.tomeScore)}">${c.tomeScore}</span></td>
+      <td><span class="sig ${s.c}">${s.i} ${c.signal}</span></td>
+      <td class="mono">${f$(c.raw)}</td>
+      <td class="mono">${f$(c.p8)}</td>
+      <td class="mono">${f$(c.p9)}</td>
+      <td class="mono">${f$(c.p10)}</td>
+      <td><div class="pc"><span class="pa ${pCls(c.dispCrack)}">${f$(c.dispCrack)}</span><span class="pl">vs PSA ${c.dispFrom} slab</span></div></td>
+      <td><div class="pc"><span class="pa ${pCls(c.gradeProfit)}">${f$(c.gradeProfit)}</span><span class="pl">10 × ${(SALE_RATE*100).toFixed(0)}% − raw − $${PSA_FEE}</span></div></td>
+      <td class="mono ${c.gradeROI>0?'up':'dn'}">${c.gradeROI>0?'+':''}${c.gradeROI}%</td>
+      <td class="mono">${c.pop10.toLocaleString()}</td>
+      <td class="mono ${momCls(c.mom)}">${fPct(c.mom)}</td>
+      <td><a class="tcg-link" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener">Buy Raw ↗</a></td>
+    </tr>`;
+  }).join('');
+}
+
+function markSortedHeader() {
+  document.querySelectorAll('thead th').forEach(t=>{
+    t.classList.remove('sorted');
+    const a=t.querySelector('.arr'); if(a) a.textContent='↕';
+  });
+  const th=document.querySelector(`thead th[data-col="${sortCol}"]`);
+  if(th){th.classList.add('sorted');th.querySelector('.arr').textContent=sortDir===-1?'↓':'↑';}
+}
+
+// ═══ EVENTS ════════════════════════════════════════════════════════════════════
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    activePreset = chip.dataset.preset;
+    const p = PRESETS[activePreset];
+    sortCol = p.col; sortDir = p.dir; sigF = p.sig;
+    document.getElementById('sigFilter').value = '';
+    markSortedHeader();
+    render();
+  });
+});
+
+function segHandler(segId, setter) {
+  document.querySelectorAll(`#${segId} .sb`).forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll(`#${segId} .sb`).forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      setter(b.dataset.v);
+      render();
+    });
+  });
+}
+segHandler('gameSeg', v=>gameF=v);
+segHandler('eraSeg',  v=>eraF=v);
+segHandler('priceSeg',v=>minPrice=parseInt(v));
+
+document.getElementById('setFilter').addEventListener('change', e=>{setF=e.target.value;render();});
+document.getElementById('sigFilter').addEventListener('change', e=>{sigF=e.target.value;render();});
+document.getElementById('search').addEventListener('input', e=>{searchF=e.target.value;render();});
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  gameF='';eraF='';setF='';sigF='';searchF='';minPrice=5;
+  document.getElementById('search').value='';
+  document.getElementById('setFilter').value='';
+  document.getElementById('sigFilter').value='';
+  ['gameSeg','eraSeg'].forEach(id=>document.querySelectorAll(`#${id} .sb`).forEach((b,i)=>b.classList.toggle('active',i===0)));
+  document.querySelectorAll('#priceSeg .sb').forEach(b=>b.classList.toggle('active',b.dataset.v==='5'));
+  render();
+});
+
+document.querySelectorAll('#feeBtns .fee-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#feeBtns .fee-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    PSA_FEE = parseInt(b.dataset.fee);
+    DATA = CARDS.map(compute);
+    render();
+  });
+});
+document.getElementById('saleSlider').addEventListener('input', e => {
+  SALE_RATE = parseInt(e.target.value)/100;
+  document.getElementById('saleLbl').textContent = e.target.value+'%';
+  DATA = CARDS.map(compute);
+  render();
+});
+
+document.querySelectorAll('thead th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    sortDir = sortCol===col ? sortDir*-1 : (['name','set','num','game','era','signal'].includes(col)?1:-1);
+    sortCol = col;
+    markSortedHeader();
+    render();
+  });
+});
+
+
+// Crack basis toggle
+document.querySelectorAll('#crackSeg .fee-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#crackSeg .fee-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    CRACK_BASIS = b.dataset.v;
+    DATA = CARDS.map(compute);
+    render();
+  });
+});
+
+// ═══ INIT ══════════════════════════════════════════════════════════════════════
+document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+[...new Set(CARDS.map(c=>c.set))].sort().forEach(s=>{
+  const o=document.createElement('option');o.value=s;o.textContent=s;
+  document.getElementById('setFilter').appendChild(o);
+});
+markSortedHeader();
+render();
+</script>
+</body>
+</html>

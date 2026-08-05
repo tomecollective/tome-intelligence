@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Era Classification Methodology — Tome Collective</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--green:#0C7958;--gold:#FFB515;--bg:#f5f6f2;--surface:#fff;--border:rgba(0,0,0,0.09);
+--text:#18190f;--text-2:#484a40;--text-3:#787a6e;--sans:'Inter',system-ui,sans-serif;}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1009;--surface:#181910;--border:rgba(255,255,255,0.08);
+--text:#eaecdf;--text-2:#a8aa9c;--text-3:#6a6c60;}}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.65;}
+.hdr{background:var(--green);height:50px;display:flex;align-items:center;padding:0 1.5rem;gap:8px;}
+.hdr a{display:flex;align-items:center;gap:7px;text-decoration:none;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gold);}
+.hdr span{font-size:14px;font-weight:600;color:#fff;}
+.wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 4rem;}
+h1{font-size:26px;font-weight:700;letter-spacing:-0.5px;margin-bottom:0.5rem;}
+.sub{font-size:14px;color:var(--text-3);margin-bottom:2rem;}
+h2{font-size:17px;font-weight:600;margin:2rem 0 0.6rem;}
+p{font-size:14px;color:var(--text-2);margin-bottom:0.9rem;}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:0.75rem 0 1.25rem;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;overflow:hidden;}
+th{background:rgba(12,121,88,0.08);padding:9px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-2);}
+td{padding:9px 12px;border-top:0.5px solid var(--border);color:var(--text-2);}
+td:first-child{font-weight:600;color:var(--text);}
+.note{background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--gold);border-radius:8px;padding:0.9rem 1.1rem;font-size:13px;color:var(--text-2);margin:1.25rem 0;}
+a{color:var(--green);}
+.back{display:inline-block;margin-top:2rem;font-size:13px;font-weight:500;text-decoration:none;}
+</style>
+</head>
+<body>
+<header class="hdr"><a href="index.html"><div class="dot"></div><span>Tome Collective</span></a></header>
+<div class="wrap">
+<h1>Era Classification Methodology</h1>
+<div class="sub">How the Tome Intelligence Dashboard classifies Vintage, Modern, and Current — and why it matters for the Tome Score.</div>
+
+<p>PSA population counts mean different things depending on when a card was printed. A population of 500 PSA 10s on a 1999 card reflects twenty-five years of grading activity on a finite supply. The same population on a 2024 card means grading has barely started on a print run that may still be growing. Treating those numbers identically would systematically misprice scarcity, so the Tome Score applies era-specific population thresholds.</p>
+
+<h2>Pokémon</h2>
+<table>
+<tr><th>Era</th><th>Boundary</th><th>Sets</th></tr>
+<tr><td>Vintage</td><td>1998 – 2003</td><td>Base Set through Skyridge (WOTC era). Includes Base, Jungle, Fossil, Team Rocket, Gym series, Neo series, Legendary Collection, and the e-Card series (Expedition, Aquapolis, Skyridge).</td></tr>
+<tr><td>Modern</td><td>2003 – 2020</td><td>EX Ruby &amp; Sapphire through Sword &amp; Shield base era. Includes EX series, Diamond &amp; Pearl, Platinum, HeartGold/SoulSilver, Black &amp; White, XY, Sun &amp; Moon, and early Sword &amp; Shield.</td></tr>
+<tr><td>Current</td><td>2021 – present</td><td>Chilling Reign onward. Includes late Sword &amp; Shield (Evolving Skies, Fusion Strike, Brilliant Stars, Crown Zenith) and all Scarlet &amp; Violet sets.</td></tr>
+</table>
+
+<div class="note"><strong>Why Evolving Skies is Current, not Modern:</strong> although printed in 2021, its population dynamics — massive print waves, ongoing grading influx, and alt-art chase economics — behave like today's market, not the sealed-supply-constrained sets of the 2010s. Era classification follows population behavior, not just the calendar.</div>
+
+<h2>Lorcana</h2>
+<table>
+<tr><th>Era</th><th>Boundary</th><th>Sets</th></tr>
+<tr><td>Current</td><td>2023 – present</td><td>All sets. The First Chapter, Rise of the Floodborn, Into the Inklands, and all subsequent releases. Lorcana has no vintage or modern era yet — the game launched in August 2023.</td></tr>
+</table>
+<p>First-print The First Chapter product may develop vintage-like scarcity characteristics over time. We will revisit this classification as the game matures and reprint behavior becomes clear.</p>
+
+<h2>One Piece TCG (English)</h2>
+<table>
+<tr><th>Era</th><th>Boundary</th><th>Sets</th></tr>
+<tr><td>Current</td><td>2022 – present</td><td>All English-release sets. Romance Dawn (OP01) onward, including Paramount War, Pillars of Strength, Kingdoms of Intrigue, and subsequent releases.</td></tr>
+</table>
+<p>Japanese-exclusive early printings and promos are outside the dashboard's current scope.</p>
+
+<h2>How Era Affects the Tome Score</h2>
+<p>The population component (35% of the Tome Score) uses different scarcity thresholds per era. As of the current model, a PSA 10 population under 30 scores maximum for a vintage card; a current-era card needs a population under 100 to earn the same score, reflecting the earlier stage of its grading lifecycle. Full threshold tables are documented in the dashboard's formula reference.</p>
+<p>Additionally, population scoring only activates on cards with a raw price of $10 or more. Below that floor, a low population typically reflects a card nobody bothers to grade rather than genuine scarcity, so the score treats population as neutral.</p>
+
+<h2>Reclassification</h2>
+<p>Era boundaries are reviewed periodically. Sets migrate as their population dynamics stabilize — what is Current today becomes Modern as grading influx slows. Changes are announced in the Tome Collective newsletter before taking effect in the dashboard.</p>
+
+<a class="back" href="index.html">← Back to the Tome Intelligence Dashboard</a>
+</div>
+</body>
+</html>
