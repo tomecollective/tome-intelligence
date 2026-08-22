@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Tome Intelligence Dashboard — Tome Collective</title>
+<title>Tome Vault: TCG Arbitrage — Tome Collective</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --green:#0C7958;--green-dark:#084d38;--gold:#FFB515;
+  --green:#d4a72c;--green-dark:#a3801e;--gold:#FFB515; /* --green is now the Vault brand gold (matches Chase Index #d4a72c) */
   --bg:#f5f6f2;--surface:#fff;--surface2:#f0f1ec;--surface3:#e4e5e0;
   --border:rgba(0,0,0,0.08);--border-md:rgba(0,0,0,0.13);--border-str:rgba(0,0,0,0.18);
   --text:#18190f;--text-2:#484a40;--text-3:#787a6e;
@@ -42,12 +42,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 /* Header */
 .hdr{background:var(--green);height:50px;display:flex;align-items:center;padding:0 1.5rem;gap:12px;position:sticky;top:0;z-index:300;}
 .hdr-logo{display:flex;align-items:center;gap:7px;text-decoration:none;}
-.hdr-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);}
-.hdr-name{font-size:14px;font-weight:600;color:#fff;letter-spacing:-0.2px;}
-.hdr-div{width:1px;height:18px;background:rgba(255,255,255,0.2);}
-.hdr-product{font-size:13px;font-weight:500;color:rgba(255,255,255,0.75);}
+.hdr-dot{width:7px;height:7px;border-radius:50%;background:#1a1a1a;}
+.hdr-name{font-size:14px;font-weight:600;color:#1a1a1a;letter-spacing:-0.2px;}
+.hdr-div{width:1px;height:18px;background:rgba(26,26,26,0.2);}
+.hdr-product{font-size:13px;font-weight:500;color:rgba(26,26,26,0.75);}
 .hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
-.hdr-pill{font-size:11px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.75);padding:3px 10px;border-radius:20px;}
+.hdr-pill{font-size:11px;background:rgba(26,26,26,0.85);color:#d4a72c;font-weight:600;padding:3px 10px;border-radius:20px;}
 
 /* Layout */
 .wrap{max-width:1320px;margin:0 auto;padding:1.25rem 1.25rem 4rem;}
@@ -62,7 +62,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;}
 .chip{font-family:var(--sans);font-size:13px;font-weight:600;padding:9px 18px;border-radius:10px;border:1px solid var(--border-str);background:var(--surface);color:var(--text-2);cursor:pointer;transition:all 0.12s;display:flex;align-items:center;gap:7px;}
 .chip:hover{border-color:var(--green);color:var(--green);transform:translateY(-1px);}
-.chip.active{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 2px 8px rgba(12,121,88,0.25);}
+.chip.active{background:var(--green);color:#1a1a1a;border-color:var(--green);box-shadow:0 2px 8px rgba(212,167,44,0.25);}
 .chip .chip-icon{font-size:15px;}
 .chip .chip-count{font-size:10px;font-weight:700;background:rgba(0,0,0,0.08);padding:2px 7px;border-radius:10px;font-family:var(--mono);}
 .chip.active .chip-count{background:rgba(255,255,255,0.2);}
@@ -74,7 +74,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .seg{display:flex;gap:3px;}
 .sb{font-family:var(--sans);font-size:12px;font-weight:500;padding:5px 11px;border-radius:16px;border:0.5px solid var(--border-str);background:transparent;color:var(--text-2);cursor:pointer;transition:all 0.1s;white-space:nowrap;}
 .sb:hover{border-color:var(--green);color:var(--green);}
-.sb.active{background:var(--green);color:#fff;border-color:var(--green);}
+.sb.active{background:var(--green);color:#1a1a1a;border-color:var(--green);}
 .fdiv{width:1px;height:22px;background:var(--border-md);}
 .sw{position:relative;min-width:150px;flex:1;max-width:220px;}
 .sw svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;}
@@ -91,7 +91,7 @@ select:focus{border-color:var(--green);}
 .plbl{font-size:11px;font-weight:500;color:var(--text-2);}
 .fee-btn{font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border-str);background:transparent;color:var(--text-2);cursor:pointer;transition:all 0.1s;}
 .fee-btn:hover{border-color:var(--green);color:var(--green);}
-.fee-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
+.fee-btn.active{background:var(--green);color:#1a1a1a;border-color:var(--green);}
 input[type=range]{accent-color:var(--green);cursor:pointer;}
 .pnote{font-size:10px;color:var(--text-3);margin-left:auto;}
 
@@ -118,7 +118,10 @@ tbody tr:hover{background:var(--surface2);}
 td{padding:9px 10px;vertical-align:middle;}
 .rk{font-size:11px;font-weight:700;color:var(--text-3);text-align:center;}
 .cc{display:flex;align-items:center;gap:9px;min-width:150px;}
-.ci{width:32px;height:44px;border-radius:3px;border:0.5px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.ci{width:32px;height:44px;border-radius:3px;border:0.5px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;object-fit:cover;}
+.ci-wrap{position:relative;flex-shrink:0;display:block;line-height:0;cursor:pointer;}
+.ci-hover{display:none;position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);width:180px;height:auto;border-radius:8px;border:1px solid var(--border-str);box-shadow:0 8px 28px rgba(0,0,0,0.35);z-index:500;background:var(--surface);}
+.ci-wrap:hover .ci-hover{display:block;}
 .cn{font-weight:500;font-size:12px;line-height:1.3;}
 .cs{font-size:10px;color:var(--text-3);}
 .cnum{font-family:var(--mono);font-size:9px;color:var(--text-3);}
@@ -144,7 +147,7 @@ td{padding:9px 10px;vertical-align:middle;}
 .mono{font-family:var(--mono);font-size:11px;}
 .up{color:var(--up);}.dn{color:var(--dn);}.fl{color:var(--text-3);}
 .tcg-link{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;color:var(--green);text-decoration:none;padding:3px 7px;border-radius:4px;border:0.5px solid var(--green);transition:all 0.1s;white-space:nowrap;}
-.tcg-link:hover{background:var(--green);color:#fff;}
+.tcg-link:hover{background:var(--green);color:#1a1a1a;}
 
 .star-btn{background:none;border:none;font-size:15px;cursor:pointer;color:var(--text-3);padding:2px 4px;line-height:1;transition:color 0.1s,transform 0.1s;}
 .star-btn:hover{color:var(--gold);transform:scale(1.2);}
@@ -164,16 +167,17 @@ td{padding:9px 10px;vertical-align:middle;}
     <div class="hdr-dot"></div><span class="hdr-name">Tome Collective</span>
   </a>
   <div class="hdr-div"></div>
-  <span class="hdr-product">Tome Intelligence Dashboard</span>
-  <div class="hdr-right"><span class="hdr-pill">Tome+ Exclusive</span></div>
+  <span class="hdr-product">Tome Vault: TCG Arbitrage</span>
+  <div class="hdr-right"><span class="hdr-pill">VAULT</span></div>
 </header>
 
 <div class="wrap">
 
   <div class="pg-hd">
     <div>
-      <div class="pg-eye">Tome Collective · TCG Intelligence</div>
-      <div class="pg-title">Tome Intelligence Dashboard</div>
+      <div class="pg-eye">Tome Collective · TCG · Market Intelligence</div>
+      <div class="pg-title">Tome Vault: TCG Arbitrage</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Powered by Tome Analytics</div>
       <div style="margin-top:6px;font-size:11px;color:var(--text-3);background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--gold);border-radius:6px;padding:6px 10px;max-width:640px;">
       <strong style="color:var(--text-2)">Beta note:</strong> raw prices and 30-day momentum are live from JustTCG. PSA 8/9/10 values and population are era-calibrated model estimates until graded-data integration ships — treat crack and grade signals as directional.
     </div>
@@ -214,16 +218,15 @@ td{padding:9px 10px;vertical-align:middle;}
         <button class="sb active" data-v="">All</button>
         <button class="sb" data-v="vintage">Vintage</button>
         <button class="sb" data-v="modern">Modern</button>
-        <button class="sb" data-v="current">Current</button>
       </div>
     </div>
     <div class="fdiv"></div>
     <div class="fgroup"><span class="flbl">Min Price</span>
       <div class="seg" id="priceSeg">
-        <button class="sb" data-v="1">$1</button>
-        <button class="sb active" data-v="5">$5</button>
-        <button class="sb" data-v="10">$10</button>
+        <button class="sb active" data-v="10">$10</button>
         <button class="sb" data-v="25">$25</button>
+        <button class="sb" data-v="50">$50</button>
+        <button class="sb" data-v="100">$100</button>
       </div>
     </div>
     <div class="fdiv"></div>
@@ -312,7 +315,7 @@ td{padding:9px 10px;vertical-align:middle;}
 
   <div class="footer">
     <div>© Tome Collective · <a href="https://tomecollective.com" target="_blank">tomecollective.com</a> · Pricing data provided by <a href="https://justtcg.com" target="_blank" rel="noopener">JustTCG</a></div>
-    <div class="disclaimer">Informational only — not investment or financial advice. Grade profit assumes a PSA 10 result; outcomes vary by card condition and centering. Cracking slabs is irreversible. Crack values apply condition haircuts (PSA 9 → ~92.5% of NM raw, PSA 8 → ~77.5%) and your selected net sale rate. Cards under $1 are excluded. Era classifications (Vintage / Modern / Current) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a>. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
+    <div class="disclaimer">Informational only — not investment or financial advice. Grade profit assumes a PSA 10 result; outcomes vary by card condition and centering. Cracking slabs is irreversible. Crack values apply condition haircuts (PSA 9 → ~92.5% of NM raw, PSA 8 → ~77.5%) and your selected net sale rate. Cards under $10 are excluded. Era classifications (Vintage / Modern) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a> — Modern is XY forward, Vintage is anything before XY. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
   </div>
 </div>
 
@@ -324,36 +327,55 @@ let CRACK_BASIS = '9';   // '9' | '8' | 'best' — which slab the Crack Profit c
 const CRACK_YIELD_P9 = 0.925;  // cracked 9 markets as NM-/LP+
 const CRACK_YIELD_P8 = 0.775;  // cracked 8 markets as LP
 const POP_PRICE_FLOOR = 10;    // pop scoring only counts above this raw price
-const HARD_PRICE_FLOOR = 1;    // cards below this are excluded at the data layer
+const HARD_PRICE_FLOOR = 10;   // cards below this are excluded at the data layer (matches the $10+ display floor)
 
 const ERA_POP = {
   vintage: [30, 80, 200, 400, 800],
-  modern:  [50, 150, 300, 600, 1000],
-  current: [100, 300, 600, 1200, 2500],
+  modern:  [50, 150, 300, 600, 1000],   // dormant until real PSA pop data ships (see tsPop)
 };
 
 const TCG = 'https://www.tcgplayer.com/search/all/product';
 const tcgHref = (n,g) => `${TCG}?q=${encodeURIComponent(n)}&utm_source=tomecollective&utm_medium=affiliate&utm_campaign=${g.toLowerCase().replace(/\s+/g,'')}`;
+// TCGPlayer's own product-image CDN, addressed by tcgplayerId — same photos shown on TCGPlayer.com.
+const tcgImg = (id, w) => `https://tcgplayer-cdn.tcgplayer.com/product/${id}_${w}w.jpg`;
 
 // ═══ LIVE DATA — JustTCG via Cloudflare Worker proxy ═══════════════════════════
 const WORKER_URL = 'https://tome-proxy.tomecollective.workers.dev';
 const PER_GAME_LIMIT = 100;   // top cards per game by price (1 API call each; edge-cached 6h)
 
-// Era classification — see era-methodology.html for the published boundaries.
-const VINTAGE_KEYS = ['base set','jungle','fossil','team rocket','gym heroes','gym challenge',
-  'neo genesis','neo discovery','neo revelation','neo destiny','legendary collection',
-  'expedition','aquapolis','skyridge'];
-const CURRENT_POKEMON_KEYS = ['chilling reign','evolving skies','fusion strike','brilliant stars',
-  'astral radiance','lost origin','silver tempest','crown zenith','scarlet','paldea','obsidian',
-  'paradox','temporal','twilight','shrouded','stellar','surging','prismatic','journey','151',
-  'mega evolution','white flare','black bolt','destined rivals'];
+// Era classification — mirrors the Pokemon Chase Index convention: Modern = XY forward,
+// Vintage = anything before XY. Boundary is XY Base Set's release date (2014-02-05), sourced
+// from JustTCG's /sets endpoint (release_date per set) rather than a hand-maintained keyword
+// list, so new sets classify correctly without code changes as they're added upstream.
+// Lorcana & One Piece launched well after XY, so every set in those games is "modern" — there's
+// no pre-XY era for them, same as the Chase Index treats non-Pokemon games.
+const XY_START = Date.parse('2014-02-05');
+let POKEMON_SET_ERA = new Map();          // set id -> 'vintage' | 'modern'
+let pokemonSetEraPromise = null;
 
-function classifyEra(game, setName) {
-  if (game !== 'Pokemon') return 'current';           // Lorcana & One Piece: all current
-  const n = (setName || '').toLowerCase();
-  if (VINTAGE_KEYS.some(k => n.includes(k))) return 'vintage';
-  if (CURRENT_POKEMON_KEYS.some(k => n.includes(k))) return 'current';
-  return 'modern';                                     // 2003–2020 default
+function ensurePokemonSetEras() {
+  if (!pokemonSetEraPromise) {
+    pokemonSetEraPromise = (async () => {
+      try {
+        const res = await fetch(`${WORKER_URL}/sets?game=${encodeURIComponent(GAME_SLUGS['Pokemon'])}`);
+        if (res.ok) {
+          const json = await res.json();
+          (json.data || []).forEach(s => {
+            const t = s.release_date ? Date.parse(s.release_date) : NaN;
+            // Unknown release dates (mostly misc./promo products) default to 'modern' —
+            // the larger, more generic bucket, so an unclassified set never overstates Vintage.
+            POKEMON_SET_ERA.set(s.id, (!isNaN(t) && t < XY_START) ? 'vintage' : 'modern');
+          });
+        }
+      } catch (e) { /* era map stays empty — classifyEra falls back to modern below */ }
+    })();
+  }
+  return pokemonSetEraPromise;
+}
+
+function classifyEra(game, setId) {
+  if (game !== 'Pokemon') return 'modern';
+  return POKEMON_SET_ERA.get(setId) || 'modern';
 }
 
 // ── Graded-value estimation (BETA) ──────────────────────────────────────────────
@@ -363,10 +385,9 @@ function classifyEra(game, setName) {
 const EST = {
   vintage: { p10: 7.0, p9: 2.1, p8: 1.25 },
   modern:  { p10: 5.5, p9: 1.7, p8: 1.05 },
-  current: { p10: 4.5, p9: 1.5, p8: 0.95 },
 };
 function estimateGraded(raw, era) {
-  const m = EST[era] || EST.current;
+  const m = EST[era] || EST.modern;
   return {
     p10: parseFloat((raw * m.p10).toFixed(2)),
     p9:  parseFloat((raw * m.p9).toFixed(2)),
@@ -393,12 +414,15 @@ function mapCard(apiCard, game) {
   if (!raw || raw < HARD_PRICE_FLOOR) return null;
 
   const setName = apiCard.set_name || apiCard.set || '';
-  const era = classifyEra(game, setName);
+  const era = classifyEra(game, apiCard.set);
   const est = estimateGraded(raw, era);
+  const tpid = apiCard.tcgplayerId || null;
 
   return {
     id: apiCard.id,
-    tcgplayerId: apiCard.tcgplayerId || null,
+    tcgplayerId: tpid,
+    img: tpid ? tcgImg(tpid, 200) : null,
+    imgBig: tpid ? tcgImg(tpid, 400) : null,
     game, era,
     e: GAME_EMOJI[game] || '🃏',
     name: apiCard.name,
@@ -444,6 +468,7 @@ async function fetchPage(g, offset) {
 }
 
 async function loadLiveData() {
+  await ensurePokemonSetEras();   // needed before any Pokemon card is classified below
   const games = ['Pokemon', 'Lorcana', 'One Piece'];
   const results = await Promise.allSettled(games.map(async g => {
     const out = [];
@@ -526,7 +551,7 @@ let SEALED = [];                    // lazily fetched
 let sealedLoaded = false;
 
 let DATA = CARDS.map(compute);
-let gameF='', eraF='', setF='', sigF='', searchF='', minPrice=5;
+let gameF='', eraF='', setF='', sigF='', searchF='', minPrice=10;
 let sortCol='tomeScore', sortDir=-1, activePreset='holds';
 
 const PRESETS = {
@@ -603,6 +628,17 @@ function updateStats(rows) {
   document.getElementById('fcount').textContent = rows.length + ' cards';
 }
 
+function cardThumb(c) {
+  // Real TCGPlayer product photo when we have a tcgplayerId; emoji placeholder otherwise
+  // (sealed-listing edge case, or an id TCGPlayer has no image for). Hover shows a larger
+  // preview; clicking goes straight to the card's TCGPlayer affiliate search link.
+  if (!c.img) return `<div class="ci">${c.e}</div>`;
+  return `<a class="ci-wrap" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+    <img class="ci" src="${c.img}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ci',textContent:'${c.e}'}))">
+    <img class="ci-hover" src="${c.imgBig || c.img}" alt="" loading="lazy" onerror="this.remove()">
+  </a>`;
+}
+
 function render() {
   const rows = getSorted(getFiltered());
   updateStats(rows);
@@ -615,7 +651,7 @@ function render() {
     return `<tr data-id="${c.id}" class="row-click">
       <td class="rk">${i+1}</td>
       <td><button class="star-btn ${starred?'starred':''}" data-star="${c.id}" title="${starred?'Remove from':'Add to'} My Cards">${starred?'★':'☆'}</button></td>
-      <td><div class="cc"><div class="ci">${c.e}</div><div><div class="cn">${c.name}</div><div class="cs">${c.set}</div></div></div></td>
+      <td><div class="cc">${cardThumb(c)}<div><div class="cn">${c.name}</div><div class="cs">${c.set}</div></div></div></td>
       <td style="font-size:11px;color:var(--text-2)">${c.set}</td>
       <td class="mono" style="color:var(--text-3)">${c.num}</td>
       <td><span class="gt ${gameCls(c.game)}">${c.game}</span></td>
@@ -695,12 +731,12 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('clearBtn').addEventListener('click', ()=>{
-  gameF='';eraF='';setF='';sigF='';searchF='';minPrice=5;
+  gameF='';eraF='';setF='';sigF='';searchF='';minPrice=10;
   document.getElementById('search').value='';
   document.getElementById('setFilter').value='';
   document.getElementById('sigFilter').value='';
   ['gameSeg','eraSeg'].forEach(id=>document.querySelectorAll(`#${id} .sb`).forEach((b,i)=>b.classList.toggle('active',i===0)));
-  document.querySelectorAll('#priceSeg .sb').forEach(b=>b.classList.toggle('active',b.dataset.v==='5'));
+  document.querySelectorAll('#priceSeg .sb').forEach(b=>b.classList.toggle('active',b.dataset.v==='10'));
   render();
 });
 
@@ -847,8 +883,9 @@ async function fetchSealedPage(g, offset) {
     const raw = parseFloat(v.price);
     if (!raw || raw < HARD_PRICE_FLOOR) return null;
     const setName = apiCard.set_name || '';
-    return { id: apiCard.id, tcgplayerId: apiCard.tcgplayerId||null, game: g,
-      era: classifyEra(g, setName), e: '📦', name: apiCard.name, set: setName, num: '—',
+    const tpid = apiCard.tcgplayerId || null;
+    return { id: apiCard.id, tcgplayerId: tpid, img: tpid?tcgImg(tpid,200):null, imgBig: tpid?tcgImg(tpid,400):null, game: g,
+      era: classifyEra(g, apiCard.set), e: '📦', name: apiCard.name, set: setName, num: '—',
       raw, p8:null, p9:null, p10:null, pop10:null,
       mom: (parseFloat(v.priceChange30d)||0)/100, mom7:(parseFloat(v.priceChange7d)||0)/100,
       chgCount30d: v.priceChangesCount30d||0, printing:'Sealed',
@@ -860,6 +897,7 @@ async function fetchSealedPage(g, offset) {
 }
 async function loadSealed() {
   if (sealedLoaded) return;
+  await ensurePokemonSetEras();
   const games = ['Pokemon','Lorcana','One Piece'];
   const results = await Promise.allSettled(games.map(async g => {
     const pages = [];
