@@ -120,8 +120,8 @@ td{padding:9px 10px;vertical-align:middle;}
 .cc{display:flex;align-items:center;gap:9px;min-width:150px;}
 .ci{width:32px;height:44px;border-radius:3px;border:0.5px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;object-fit:cover;}
 .ci-wrap{position:relative;flex-shrink:0;display:block;line-height:0;cursor:pointer;}
-.ci-hover{display:none;position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);width:180px;height:auto;border-radius:8px;border:1px solid var(--border-str);box-shadow:0 8px 28px rgba(0,0,0,0.35);z-index:500;background:var(--surface);}
-.ci-wrap:hover .ci-hover{display:block;}
+#hoverPreview{display:none;position:fixed;width:180px;height:auto;border-radius:8px;border:1px solid var(--border-str);box-shadow:0 8px 28px rgba(0,0,0,0.35);z-index:9999;background:var(--surface);pointer-events:none;}
+@media(hover:none){#hoverPreview{display:none !important;}}
 .cn{font-weight:500;font-size:12px;line-height:1.3;}
 .cs{font-size:10px;color:var(--text-3);}
 .cnum{font-family:var(--mono);font-size:9px;color:var(--text-3);}
@@ -158,6 +158,26 @@ td{padding:9px 10px;vertical-align:middle;}
 .footer{text-align:center;font-size:11px;color:var(--text-3);padding:2rem 0 1rem;border-top:0.5px solid var(--border);margin-top:1.5rem;}
 .footer a{color:var(--green);text-decoration:none;}
 .disclaimer{font-size:10px;color:var(--text-3);max-width:660px;margin:0.5rem auto 0;line-height:1.6;}
+
+/* Mobile */
+@media(max-width:700px){
+  .wrap{padding:0.85rem 0.75rem 3rem;}
+  .hdr{padding:0 1rem;}
+  .pg-title{font-size:20px;}
+  .pg-hd{align-items:flex-start;}
+  .pg-meta{text-align:left;}
+  .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+  .chips::-webkit-scrollbar{height:0;}
+  .chip{flex-shrink:0;}
+  .fbar{padding:0.6rem;}
+  .fgroup{flex-wrap:wrap;}
+  .sw{max-width:none;min-width:120px;}
+  .clear-btn{margin-left:0;}
+  .pbar{gap:8px;}
+  .pnote{display:none;}
+  .stats{grid-template-columns:repeat(2,1fr);}
+  #drawer{width:100vw;}
+}
 </style>
 </head>
 <body>
@@ -197,13 +217,6 @@ td{padding:9px 10px;vertical-align:middle;}
 
   <!-- Filters -->
   <div class="fbar">
-    <div class="fgroup"><span class="flbl">View</span>
-      <div class="seg" id="viewSeg">
-        <button class="sb active" data-v="singles">Singles</button>
-        <button class="sb" data-v="sealed">Sealed</button>
-      </div>
-    </div>
-    <div class="fdiv"></div>
     <div class="fgroup"><span class="flbl">Game</span>
       <div class="seg" id="gameSeg">
         <button class="sb active" data-v="">All</button>
@@ -223,10 +236,10 @@ td{padding:9px 10px;vertical-align:middle;}
     <div class="fdiv"></div>
     <div class="fgroup"><span class="flbl">Min Price</span>
       <div class="seg" id="priceSeg">
-        <button class="sb active" data-v="10">$10</button>
-        <button class="sb" data-v="25">$25</button>
+        <button class="sb active" data-v="25">$25</button>
         <button class="sb" data-v="50">$50</button>
         <button class="sb" data-v="100">$100</button>
+        <button class="sb" data-v="250">$250</button>
       </div>
     </div>
     <div class="fdiv"></div>
@@ -245,7 +258,6 @@ td{padding:9px 10px;vertical-align:middle;}
     </div>
     <span class="fcount" id="fcount">—</span>
     <button class="clear-btn" id="clearBtn">Clear</button>
-    <button class="clear-btn" id="exportBtn" style="color:var(--green);border-color:var(--green);">Export Pop Tracker</button>
   </div>
 
   <!-- Profit controls -->
@@ -263,8 +275,8 @@ td{padding:9px 10px;vertical-align:middle;}
     <span style="width:1px;height:18px;background:var(--border-md);"></span>
     <span class="plbl">Crack vs:</span>
     <div class="seg" id="crackSeg">
-      <button class="fee-btn active" data-v="9">PSA 9</button>
-      <button class="fee-btn" data-v="8">PSA 8</button>
+      <button class="fee-btn" data-v="9">PSA 9</button>
+      <button class="fee-btn active" data-v="8">PSA 8</button>
       <button class="fee-btn" data-v="best">Best</button>
     </div>
     <span class="pnote">eBay ~85% · TCGPlayer ~87% · Buylist ~65% · Crack yields: PSA 9→92.5% NM, PSA 8→77.5% NM</span>
@@ -300,7 +312,6 @@ td{padding:9px 10px;vertical-align:middle;}
         <th data-col="dispCrack" style="width:96px">Crack Profit<span class="arr">↕</span></th>
         <th data-col="gradeProfit" style="width:100px">Grade Profit<span class="arr">↕</span></th>
         <th data-col="gradeROI" style="width:76px">Grade ROI<span class="arr">↕</span></th>
-        <th data-col="pop10" style="width:72px">PSA 10 Pop<span class="arr">↕</span></th>
         <th data-col="mom" style="width:66px">30d Chg<span class="arr">↕</span></th>
         <th class="ns" style="width:72px">7d Trend</th>
         <th class="ns" style="width:80px">TCGPlayer</th>
@@ -312,6 +323,7 @@ td{padding:9px 10px;vertical-align:middle;}
   <!-- Detail drawer -->
   <div id="drawerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:400;"></div>
   <div id="drawer" style="display:none;position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--surface);border-left:0.5px solid var(--border-str);z-index:401;overflow-y:auto;padding:1.25rem;box-shadow:-8px 0 30px rgba(0,0,0,0.15);"></div>
+  <img id="hoverPreview" alt=""/>
 
   <div class="footer">
     <div>© Tome Collective · <a href="https://tomecollective.com" target="_blank">tomecollective.com</a> · Pricing data provided by <a href="https://justtcg.com" target="_blank" rel="noopener">JustTCG</a></div>
@@ -323,16 +335,10 @@ td{padding:9px 10px;vertical-align:middle;}
 // ═══ CONFIG ════════════════════════════════════════════════════════════════════
 let SALE_RATE = 0.80;
 let PSA_FEE = 25;
-let CRACK_BASIS = '9';   // '9' | '8' | 'best' — which slab the Crack Profit column benchmarks
+let CRACK_BASIS = '8';   // '9' | '8' | 'best' — which slab the Crack Profit column benchmarks
 const CRACK_YIELD_P9 = 0.925;  // cracked 9 markets as NM-/LP+
 const CRACK_YIELD_P8 = 0.775;  // cracked 8 markets as LP
-const POP_PRICE_FLOOR = 10;    // pop scoring only counts above this raw price
 const HARD_PRICE_FLOOR = 10;   // cards below this are excluded at the data layer (matches the $10+ display floor)
-
-const ERA_POP = {
-  vintage: [30, 80, 200, 400, 800],
-  modern:  [50, 150, 300, 600, 1000],   // dormant until real PSA pop data ships (see tsPop)
-};
 
 const TCG = 'https://www.tcgplayer.com/search/all/product';
 const tcgHref = (n,g) => `${TCG}?q=${encodeURIComponent(n)}&utm_source=tomecollective&utm_medium=affiliate&utm_campaign=${g.toLowerCase().replace(/\s+/g,'')}`;
@@ -392,7 +398,6 @@ function estimateGraded(raw, era) {
     p10: parseFloat((raw * m.p10).toFixed(2)),
     p9:  parseFloat((raw * m.p9).toFixed(2)),
     p8:  parseFloat((raw * m.p8).toFixed(2)),
-    pop10: null,  // unknown until graded integration; pop scores neutral
   };
 }
 
@@ -431,7 +436,6 @@ function mapCard(apiCard, game) {
     raw,
     p8: est.p8, p9: est.p9, p10: est.p10,
     gem: null,
-    pop10: est.pop10,
     // JustTCG returns priceChange30d as a percentage; normalize to decimal
     mom: (parseFloat(nm.priceChange30d) || 0) / 100,
     mom7: (parseFloat(nm.priceChange7d) || 0) / 100,
@@ -446,17 +450,22 @@ function mapCard(apiCard, game) {
 
 let CARDS = [];
 
-// Per-game page caps sized to each game's $10+ universe.
-// Fetching stops early once a page's cheapest card falls below UNIVERSE_FLOOR,
-// so quiet games never burn their full cap. Worst case ~29 calls per 6h cache window.
+// Per-game page caps sized to each game's $10+ universe (2,900 cards total).
+// Each cap is split across two passes: a cheapest-first pass and a priciest-first pass.
+// Why: under the current crack-profit model, crack economics get *worse* as raw price
+// rises (the estimated slab value scales faster than the cracked resale value), so the
+// cards most likely to show real crack profit sit at the low end of the $10+ universe —
+// exactly the cards a price-desc-only fetch would leave out of the 2,900-card cap.
+// The desc pass is kept to preserve Grade/Hold discovery, which favors higher-priced cards.
 const PAGE_CAP = { 'Pokemon': 20, 'Lorcana': 4, 'One Piece': 5 };
+const ASC_SHARE = 0.5;   // portion of each game's cap spent on the cheapest-first pass
 const UNIVERSE_FLOOR = 10;
 
-async function fetchPage(g, offset) {
+async function fetchPage(g, offset, order) {
   const res = await fetch(
     `${WORKER_URL}/cards?game=${encodeURIComponent(GAME_SLUGS[g] || g)}` +
     `&condition=${encodeURIComponent('Near Mint')}` +    // server-side: singles only, no sealed
-    `&orderBy=price&order=desc&limit=${PER_GAME_LIMIT}&offset=${offset}` +
+    `&orderBy=price&order=${order}&limit=${PER_GAME_LIMIT}&offset=${offset}` +
     `&include_price_history=true`                         // 7d daily points for sparklines
   );
   if (!res.ok) {
@@ -471,13 +480,25 @@ async function loadLiveData() {
   await ensurePokemonSetEras();   // needed before any Pokemon card is classified below
   const games = ['Pokemon', 'Lorcana', 'One Piece'];
   const results = await Promise.allSettled(games.map(async g => {
-    const out = [];
     const cap = PAGE_CAP[g] || 3;
-    for (let i = 0; i < cap; i++) {
-      const page = await fetchPage(g, i * PER_GAME_LIMIT);
-      out.push(...page);
+    const ascPages = Math.max(1, Math.round(cap * ASC_SHARE));
+    const descPages = Math.max(0, cap - ascPages);
+    const seen = new Set();
+    const out = [];
+    const add = list => { for (const c of list) if (!seen.has(c.id)) { seen.add(c.id); out.push(c); } };
+
+    // Cheapest-first: best available crack-profit candidates.
+    for (let i = 0; i < ascPages; i++) {
+      const page = await fetchPage(g, i * PER_GAME_LIMIT, 'asc');
+      add(page);
+      if (!page.length) break;                                  // API exhausted
+    }
+    // Priciest-first: best available grade/hold candidates (unchanged behavior).
+    for (let i = 0; i < descPages; i++) {
+      const page = await fetchPage(g, i * PER_GAME_LIMIT, 'desc');
       if (!page.length) break;                                  // API exhausted
       const cheapest = Math.min(...page.map(c => c.raw));
+      add(page);
       if (cheapest < UNIVERSE_FLOOR) break;                     // below the $10+ universe
     }
     return out;
@@ -493,12 +514,6 @@ async function loadLiveData() {
 }
 
 // ═══ SCORING ═══════════════════════════════════════════════════════════════════
-function tsPop(pop, era, raw) {
-  if (pop == null) return 40;               // pop unknown in beta — score neutral
-  if (raw < POP_PRICE_FLOOR) return 40;
-  const t = ERA_POP[era] || ERA_POP.modern;
-  return pop<t[0]?100:pop<t[1]?85:pop<t[2]?70:pop<t[3]?50:pop<t[4]?30:15;
-}
 const tsMult = m=>m>=10?100:m>=7?85:m>=5?70:m>=3?50:m>=2?30:10;
 const tsMom  = m=>m>=.20?100:m>=.10?80:m>=.05?60:m>=-.05?40:m>=-.15?20:5;
 const tsEnt  = p=>p<5?100:p<15?80:p<40?60:p<100?40:p<250?20:5;
@@ -514,14 +529,15 @@ function compute(r) {
   const gradeROI = r.raw > 0 ? parseFloat((gradeProfit / r.raw * 100).toFixed(1)) : 0;
   const mult = r.p10 / r.raw;
 
-  // Four-factor Tome Score (v2): velocity removed until a real sales-data
-  // source (eBay API) is integrated. JustTCG provides pricing only.
-  // Momentum uses the 30d window (most stable field JustTCG provides).
+  // Three-factor Tome Score (v3): PSA 10 pop scoring removed entirely (population data
+  // isn't real yet, so it only ever contributed a fixed, non-discriminating value — which
+  // silently capped every card's ceiling well under the "Hold" threshold). Its weight is
+  // redistributed proportionally across the three factors that actually vary card-to-card.
+  // Velocity remains excluded until a real sales-data source (eBay API) is integrated.
   const tomeScore = Math.round(
-    tsPop(r.pop10, r.era, r.raw) * 0.35 +
-    tsMult(mult) * 0.25 +
-    tsMom(r.mom) * 0.25 +
-    tsEnt(r.raw) * 0.15
+    tsMult(mult) * 0.40 +
+    tsMom(r.mom) * 0.40 +
+    tsEnt(r.raw) * 0.20
   );
 
   // Column display follows the selected crack basis (must precede signal logic)
@@ -546,12 +562,9 @@ function toggleWatch(id) {
   render();
 }
 let watchOnly = false;
-let viewMode = 'singles';           // 'singles' | 'sealed'
-let SEALED = [];                    // lazily fetched
-let sealedLoaded = false;
 
 let DATA = CARDS.map(compute);
-let gameF='', eraF='', setF='', sigF='', searchF='', minPrice=10;
+let gameF='', eraF='', setF='', sigF='', searchF='', minPrice=25;
 let sortCol='tomeScore', sortDir=-1, activePreset='holds';
 
 const PRESETS = {
@@ -563,8 +576,7 @@ const PRESETS = {
 
 // ═══ FILTER / SORT ═════════════════════════════════════════════════════════════
 function getFiltered() {
-  const src = viewMode === 'sealed' ? SEALED : DATA;
-  return src.filter(c => {
+  return DATA.filter(c => {
     if (watchOnly && !WATCHLIST.has(c.id)) return false;
     if (c.raw < minPrice) return false;
     if (gameF && c.game !== gameF) return false;
@@ -633,9 +645,8 @@ function cardThumb(c) {
   // (sealed-listing edge case, or an id TCGPlayer has no image for). Hover shows a larger
   // preview; clicking goes straight to the card's TCGPlayer affiliate search link.
   if (!c.img) return `<div class="ci">${c.e}</div>`;
-  return `<a class="ci-wrap" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+  return `<a class="ci-wrap" data-hover-src="${c.imgBig || c.img}" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
     <img class="ci" src="${c.img}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ci',textContent:'${c.e}'}))">
-    <img class="ci-hover" src="${c.imgBig || c.img}" alt="" loading="lazy" onerror="this.remove()">
   </a>`;
 }
 
@@ -644,7 +655,7 @@ function render() {
   updateStats(rows);
   updateChipCounts();
   const tbody = document.getElementById('tbody');
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="21" style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px">No cards match your filters. Try lowering the minimum price or clearing filters.</td></tr>'; return; }
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px">No cards match your filters. Try lowering the minimum price or clearing filters.</td></tr>'; return; }
   tbody.innerHTML = rows.map((c,i) => {
     const s = SIG[c.signal];
     const starred = WATCHLIST.has(c.id);
@@ -665,7 +676,6 @@ function render() {
       <td>${c.dispCrack==null?'—':`<div class="pc"><span class="pa ${pCls(c.dispCrack)}">${f$(c.dispCrack)}</span><span class="pl">vs PSA ${c.dispFrom} slab</span></div>`}</td>
       <td>${c.gradeProfit==null?'—':`<div class="pc"><span class="pa ${pCls(c.gradeProfit)}">${f$(c.gradeProfit)}</span><span class="pl">10 × ${(SALE_RATE*100).toFixed(0)}% − raw − $${PSA_FEE}</span></div>`}</td>
       <td class="mono ${c.gradeROI>0?'up':c.gradeROI<0?'dn':'fl'}">${c.gradeROI==null?'—':(c.gradeROI>0?'+':'')+c.gradeROI+'%'}</td>
-      <td class="mono">${c.pop10 == null ? '—' : c.pop10.toLocaleString()}</td>
       <td class="mono ${momCls(c.mom)}">${fPct(c.mom)}</td>
       <td>${sparkline(c.h7)}</td>
       <td><a class="tcg-link" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Buy Raw ↗</a></td>
@@ -713,30 +723,14 @@ segHandler('priceSeg',v=>minPrice=parseInt(v));
 document.getElementById('setFilter').addEventListener('change', e=>{setF=e.target.value;render();});
 document.getElementById('sigFilter').addEventListener('change', e=>{sigF=e.target.value;render();});
 document.getElementById('search').addEventListener('input', e=>{searchF=e.target.value;render();});
-document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const rows = getSorted(getFiltered());
-  if (!rows.length) return;
-  const esc = v => '"' + String(v==null?'':v).replace(/"/g,'""') + '"';
-  const header = 'game,card,set,number,era,raw_price,tome_score,pop8,pop9,pop10,as_of';
-  const body = rows.map(c =>
-    [c.game, c.name, c.set, c.num, c.era, c.raw, c.tomeScore, '', '', '', ''].map(esc).join(',')
-  ).join('\n');
-  const blob = new Blob([header + '\n' + body], {type:'text/csv'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  const today = new Date().toISOString().slice(0,10);
-  a.download = `tome-pop-tracker-${today}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
 
 document.getElementById('clearBtn').addEventListener('click', ()=>{
-  gameF='';eraF='';setF='';sigF='';searchF='';minPrice=10;
+  gameF='';eraF='';setF='';sigF='';searchF='';minPrice=25;
   document.getElementById('search').value='';
   document.getElementById('setFilter').value='';
   document.getElementById('sigFilter').value='';
   ['gameSeg','eraSeg'].forEach(id=>document.querySelectorAll(`#${id} .sb`).forEach((b,i)=>b.classList.toggle('active',i===0)));
-  document.querySelectorAll('#priceSeg .sb').forEach(b=>b.classList.toggle('active',b.dataset.v==='10'));
+  document.querySelectorAll('#priceSeg .sb').forEach(b=>b.classList.toggle('active',b.dataset.v==='25'));
   render();
 });
 
@@ -808,8 +802,7 @@ function bigChart(points, label) {
 }
 
 async function openDrawer(id) {
-  const src = viewMode==='sealed' ? SEALED : DATA;
-  const c = src.find(x=>x.id===id);
+  const c = DATA.find(x=>x.id===id);
   if (!c) return;
   const d = document.getElementById('drawer');
   const o = document.getElementById('drawerOverlay');
@@ -850,7 +843,7 @@ async function openDrawer(id) {
     <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Data</div>
     <div style="font-size:11px;color:var(--text-2);line-height:1.8">
       Tome Score: <strong>${c.tomeScore??'—'}</strong> · Signal: <strong>${c.signal??'—'}</strong><br>
-      PSA 10 Pop: ${c.pop10==null?'— (pending)':c.pop10.toLocaleString()} · 30d price updates: ${c.chgCount30d??'—'}
+      30d price updates: ${c.chgCount30d??'—'}
     </div>
     <a class="tcg-link" style="margin-top:16px;justify-content:center;display:flex;padding:9px" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener">Buy on TCGPlayer ↗</a>
   `;
@@ -872,42 +865,6 @@ async function openDrawer(id) {
 }
 function closeDrawer(){ document.getElementById('drawer').style.display='none'; document.getElementById('drawerOverlay').style.display='none'; }
 
-// ═══ SEALED (lazy fetch on first toggle) ═══════════════════════════════════════
-async function fetchSealedPage(g, offset) {
-  const res = await fetch(`${WORKER_URL}/cards?game=${encodeURIComponent(GAME_SLUGS[g]||g)}&orderBy=price&order=desc&limit=${PER_GAME_LIMIT}&offset=${offset}&include_price_history=true`);
-  if (!res.ok) throw new Error(`${g} sealed: HTTP ${res.status}`);
-  const json = await res.json();
-  return (json.data||[]).map(apiCard => {
-    const v = (apiCard.variants||[]).find(x => x.condition === 'Sealed');
-    if (!v) return null;
-    const raw = parseFloat(v.price);
-    if (!raw || raw < HARD_PRICE_FLOOR) return null;
-    const setName = apiCard.set_name || '';
-    const tpid = apiCard.tcgplayerId || null;
-    return { id: apiCard.id, tcgplayerId: tpid, img: tpid?tcgImg(tpid,200):null, imgBig: tpid?tcgImg(tpid,400):null, game: g,
-      era: classifyEra(g, apiCard.set), e: '📦', name: apiCard.name, set: setName, num: '—',
-      raw, p8:null, p9:null, p10:null, pop10:null,
-      mom: (parseFloat(v.priceChange30d)||0)/100, mom7:(parseFloat(v.priceChange7d)||0)/100,
-      chgCount30d: v.priceChangesCount30d||0, printing:'Sealed',
-      h7:(v.priceHistory||[]).map(pt=>pt.p),
-      min90:parseFloat(v.minPrice90d)||null, max90:parseFloat(v.maxPrice90d)||null, avg90:parseFloat(v.avgPrice90d)||null,
-      crackP8:null, crackP9:null, bestCrack:null, dispCrack:null, dispFrom:null,
-      gradeProfit:null, gradeROI:null, mult:null, tomeScore:null, signal:'—' };
-  }).filter(Boolean);
-}
-async function loadSealed() {
-  if (sealedLoaded) return;
-  await ensurePokemonSetEras();
-  const games = ['Pokemon','Lorcana','One Piece'];
-  const results = await Promise.allSettled(games.map(async g => {
-    const pages = [];
-    for (let i=0;i<2;i++) { const pg = await fetchSealedPage(g, i*PER_GAME_LIMIT); pages.push(...pg); if (!pg.length) break; }
-    return pages;
-  }));
-  SEALED = results.flatMap(r => r.status==='fulfilled' ? r.value : []);
-  sealedLoaded = true;
-}
-
 // ═══ EVENT DELEGATION: stars + row clicks ══════════════════════════════════════
 document.getElementById('tbody').addEventListener('click', e => {
   const star = e.target.closest('.star-btn');
@@ -922,24 +879,43 @@ document.getElementById('watchChip').addEventListener('click', () => {
   render();
 });
 
-document.querySelectorAll('#viewSeg .sb').forEach(b => {
-  b.addEventListener('click', async () => {
-    document.querySelectorAll('#viewSeg .sb').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    viewMode = b.dataset.v;
-    if (viewMode==='sealed' && !sealedLoaded) {
-      document.getElementById('tbody').innerHTML = '<tr><td colspan="21" style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px">Loading sealed products…</td></tr>';
-      await loadSealed();
-    }
-    render();
+// ═══ HOVER PREVIEW (fixed-position, viewport-clamped) ══════════════════════════
+// Positioned via JS rather than a pure-CSS absolute child, because the table's
+// scroll container clips vertical overflow — a CSS-only popup got cut off / hidden
+// behind the sticky header for rows near the top of the table.
+const hoverPreview = document.getElementById('hoverPreview');
+document.getElementById('tbody').addEventListener('mouseover', e => {
+  const wrap = e.target.closest('.ci-wrap');
+  if (!wrap || !wrap.dataset.hoverSrc) return;
+  hoverPreview.src = wrap.dataset.hoverSrc;
+  const r = wrap.getBoundingClientRect();
+  hoverPreview.style.display = 'block';
+  hoverPreview.style.left = (r.right + 8) + 'px';
+  hoverPreview.style.top = (r.top + r.height/2) + 'px';
+  hoverPreview.style.transform = 'translateY(-50%)';
+  requestAnimationFrame(() => {
+    const pw = hoverPreview.offsetWidth || 180, ph = hoverPreview.offsetHeight || 250;
+    let left = r.right + 8;
+    if (left + pw > window.innerWidth - 8) left = Math.max(8, r.left - pw - 8);
+    let top = r.top + r.height/2 - ph/2;
+    top = Math.max(8, Math.min(top, window.innerHeight - ph - 8));
+    hoverPreview.style.left = left + 'px';
+    hoverPreview.style.top = top + 'px';
+    hoverPreview.style.transform = 'none';
   });
+});
+document.getElementById('tbody').addEventListener('mouseout', e => {
+  const wrap = e.target.closest('.ci-wrap');
+  if (!wrap) return;
+  if (e.relatedTarget && wrap.contains(e.relatedTarget)) return;
+  hoverPreview.style.display = 'none';
 });
 
 // ═══ INIT ══════════════════════════════════════════════════════════════════════
 document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
 document.getElementById('tbody').innerHTML =
-  '<tr><td colspan="21" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+  '<tr><td colspan="19" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
   '<div style="width:26px;height:26px;border:2.5px solid var(--border-str);border-top-color:var(--green);border-radius:50%;animation:tspin 0.7s linear infinite;margin:0 auto 0.75rem"></div>' +
   'Loading live pricing from JustTCG…</td></tr>' +
   '<style>@keyframes tspin{to{transform:rotate(360deg)}}</style>';
@@ -949,7 +925,7 @@ document.getElementById('tbody').innerHTML =
     const { cards, errors } = await loadLiveData();
     if (!cards.length) {
       document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="21" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+        '<tr><td colspan="19" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
         'Could not load card data.' + (errors.length ? '<br><span style="font-size:11px">' + errors.join(' · ') + '</span>' : '') +
         '<br><span style="font-size:11px">Check the worker URL and try refreshing.</span></td></tr>';
       return;
@@ -971,7 +947,7 @@ document.getElementById('tbody').innerHTML =
     }
   } catch (err) {
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="21" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+      '<tr><td colspan="19" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
       'Failed to load data: ' + err.message + '</td></tr>';
   }
 })();
