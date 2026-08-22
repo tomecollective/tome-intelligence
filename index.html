@@ -336,7 +336,7 @@ td{padding:9px 10px;vertical-align:middle;}
         <th data-col="num" style="width:70px">Card #<span class="arr">↕</span></th>
         <th data-col="game" style="width:74px">Game<span class="arr">↕</span></th>
         <th data-col="era" style="width:66px">Era<span class="arr">↕</span></th>
-        <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="arr">↓</span></th>
+        <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="info-ic" data-tip="Tome Score (0–100) ranks how attractive a card is to hold. It weighs three things: estimated dollar upside from grading, 30-day price momentum, and entry price — higher scores mean stronger hold candidates. The exact weighting is proprietary and keeps evolving as our data improves." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↓</span></th>
         <th data-col="signal" style="width:112px">Signal<span class="arr">↕</span></th>
         <th data-col="raw" style="width:64px">Raw NM<span class="arr">↕</span></th>
         <th data-col="p8" style="width:58px">PSA 8 est.<span class="arr">↕</span></th>
@@ -491,8 +491,14 @@ function mapCard(apiCard, game) {
     raw,
     p8: est.p8, p9: est.p9, p10: est.p10,
     gem: null,
-    // JustTCG returns priceChange30d as a percentage; normalize to decimal
-    mom: (parseFloat(nm.priceChange30d) || 0) / 100,
+    // JustTCG returns priceChange30d as a percentage; normalize to decimal. Kept as `null`
+    // (not coerced to 0) when JustTCG has no value — the old `|| 0` fallback made "no data"
+    // indistinguishable from "confirmed flat 0% price change", which silently treated every
+    // thinly-traded card (44% of the live catalog) as if its price hadn't moved at all,
+    // dragging its Tome Score down along with genuinely flat cards. Downstream, null mom
+    // renders as "—" instead of "+0%" and scores as neutral instead of "no momentum".
+    mom: (nm.priceChange30d != null && nm.priceChange30d !== '' && !isNaN(parseFloat(nm.priceChange30d)))
+      ? parseFloat(nm.priceChange30d) / 100 : null,
     mom7: (parseFloat(nm.priceChange7d) || 0) / 100,
     chgCount30d: nm.priceChangesCount30d || 0,
     printing: nm.printing || 'Normal',
@@ -569,9 +575,38 @@ async function loadLiveData() {
 }
 
 // ═══ SCORING ═══════════════════════════════════════════════════════════════════
-const tsMult = m=>m>=10?100:m>=7?85:m>=5?70:m>=3?50:m>=2?30:10;
-const tsMom  = m=>m>=.20?100:m>=.10?80:m>=.05?60:m>=-.05?40:m>=-.15?20:5;
-const tsEnt  = p=>p<5?100:p<15?80:p<40?60:p<100?40:p<250?20:5;
+// Piecewise-linear interpolation between anchor points (clamped at the ends), used
+// in place of hard tiers. Hard tiers meant any two cards landing in the same bucket
+// were mathematically identical no matter how different their real numbers were —
+// e.g. every vintage card scored the exact same "value" factor, and cards at +21%
+// vs. +127% momentum scored the exact same "momentum" factor. Interpolating between
+// the same anchor points keeps the original design's intent but lets nearby inputs
+// produce nearby (not identical) scores.
+function lerp(x, pts) {
+  if (x <= pts[0][0]) return pts[0][1];
+  const last = pts[pts.length - 1];
+  if (x >= last[0]) return last[1];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+    if (x <= x1) return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
+  }
+  return last[1];
+}
+// Value factor: dollar upside from grading (PSA10 est. x sale rate − raw − fee) —
+// NOT the raw/PSA10 ratio the v3 formula used. That ratio is a flat per-era constant
+// in the current estimation model (every vintage card is exactly 7.0x, every modern
+// card exactly 5.5x — see EST above), so it carried zero real information about any
+// individual card despite being 40% of the score's weight. Dollar upside scales with
+// raw price, so it actually varies card-to-card.
+// Log-spaced above $0 — real grading upside spans over two orders of magnitude in this
+// catalog (roughly $50 for a cheap modern card to $60k+ for the rarest vintage slabs), and
+// a linear scale either compresses the common range to nothing or clips the whole high end
+// to an identical ceiling. Logging the input keeps differentiation at both ends.
+const tsValue = gp => gp <= 0
+  ? lerp(gp, [[-500,2],[0,15]])
+  : lerp(Math.log1p(gp), [[Math.log1p(0),15],[Math.log1p(50),40],[Math.log1p(200),63],[Math.log1p(1200),83],[Math.log1p(5000),93],[Math.log1p(15000),100]]);
+const tsMom   = m  => lerp(m,  [[-0.30,5],[-0.15,20],[-0.05,40],[0.05,60],[0.10,80],[0.20,100]]);
+const tsEnt   = p  => lerp(p,  [[0,100],[5,100],[15,80],[40,60],[100,40],[250,20],[600,5]]);
 
 function compute(r) {
   const cv9 = r.raw * CRACK_YIELD_P9 * SALE_RATE;
@@ -584,16 +619,31 @@ function compute(r) {
   const gradeROI = r.raw > 0 ? parseFloat((gradeProfit / r.raw * 100).toFixed(1)) : 0;
   const mult = r.p10 / r.raw;
 
-  // Three-factor Tome Score (v3): PSA 10 pop scoring removed entirely (population data
+  // Three-factor Tome Score (v4): PSA 10 pop scoring removed entirely (population data
   // isn't real yet, so it only ever contributed a fixed, non-discriminating value — which
   // silently capped every card's ceiling well under the "Hold" threshold). Its weight is
   // redistributed proportionally across the three factors that actually vary card-to-card.
-  // Velocity remains excluded until a real sales-data source (eBay API) is integrated.
-  const tomeScore = Math.round(
-    tsMult(mult) * 0.40 +
-    tsMom(r.mom) * 0.40 +
+  // v4 also swaps the "value" factor from the raw/PSA10 ratio (a flat per-era constant,
+  // see tsValue above) to dollar grading upside, and all three factors are now continuous
+  // (lerp) instead of hard tiers, so cards with different underlying numbers don't collapse
+  // onto identical scores. Velocity remains excluded until a real sales-data source (eBay
+  // API) is integrated.
+  // Rounded to one decimal, not a whole integer — with the old hard-tier formula a decimal
+  // would never show anything but ".0" (every tier value was a multiple of 5 combined with
+  // 0.4/0.4/0.2 weights, so the weighted sum was mathematically guaranteed to be a whole
+  // number). The continuous formula actually produces fractional scores now, so keeping the
+  // decimal is what lets otherwise-close cards still show as distinguishable.
+  // Momentum is scored neutral (50 — the midpoint of tsMom's 5–100 range) when JustTCG has
+  // no 30-day figure at all, rather than running r.mom (now `null`, not a fake 0) through
+  // tsMom. That keeps "unknown" from ever being scored as either a confirmed win or loss,
+  // and decouples its treatment from wherever tsMom's own curve happens to sit at x=0 —
+  // which will drift as that curve gets retuned, but "no data = neutral" shouldn't.
+  const momScore = r.mom == null ? 50 : tsMom(r.mom);
+  const tomeScore = Math.round((
+    tsValue(gradeProfit) * 0.40 +
+    momScore * 0.40 +
     tsEnt(r.raw) * 0.20
-  );
+  ) * 10) / 10;
 
   // Column display follows the selected crack basis (must precede signal logic)
   const dispCrack = CRACK_BASIS==='8' ? crackP8 : CRACK_BASIS==='9' ? crackP9 : bestCrack;
@@ -661,8 +711,8 @@ function sparkline(h) {
 }
 
 const f$ = n => (n<0?'-$':'$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-const fPct = n => (n>=0?'+':'')+((n||0)*100).toFixed(0)+'%';
-const momCls = n => n>.05?'up':n<-.05?'dn':'fl';
+const fPct = n => n==null ? '—' : (n>=0?'+':'')+(n*100).toFixed(0)+'%';
+const momCls = n => n==null ? 'fl' : n>.05?'up':n<-.05?'dn':'fl';
 const pCls = n => n>0?'pos':'neg';
 const tsCls = s => s>=75?'ts-e':s>=55?'ts-s':s>=35?'ts-w':'ts-x';
 const gameCls = g => g==='Pokemon'?'gp':g==='Lorcana'?'gl':'go';
@@ -676,7 +726,7 @@ function updateChipCounts() {
   document.getElementById('cHolds').textContent  = base.filter(c=>c.tomeScore>=75).length;
   document.getElementById('cCracks').textContent = base.filter(c=>c.dispCrack>0).length;
   document.getElementById('cGrades').textContent = base.filter(c=>c.gradeProfit>0).length;
-  document.getElementById('cMovers').textContent = base.filter(c=>Math.abs(c.mom)>=0.20).length;
+  document.getElementById('cMovers').textContent = base.filter(c=>c.mom!=null && Math.abs(c.mom)>=0.20).length;
   document.getElementById('cWatch').textContent = WATCHLIST.size;
 }
 
@@ -736,7 +786,7 @@ function render() {
       <td class="mono" style="color:var(--text-3)">${c.num}</td>
       <td><span class="gt ${gameCls(c.game)}">${c.game}</span></td>
       <td><span class="era-tag">${c.era}</span></td>
-      <td><span class="ts-pill ${tsCls(c.tomeScore)}">${c.tomeScore}</span></td>
+      <td><span class="ts-pill ${tsCls(c.tomeScore)}">${c.tomeScore.toFixed(1)}</span></td>
       <td><span class="sig ${s.c}">${s.i} ${c.signal}</span></td>
       <td class="mono">${f$(c.raw)}</td>
       <td class="mono">${c.p8==null?'—':f$(c.p8)}</td>
@@ -950,7 +1000,7 @@ async function openDrawer(id) {
     <table style="width:100%;border-collapse:collapse;background:var(--surface2);border-radius:6px;overflow:hidden">${feeRows}</table>`:''}
     <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Data</div>
     <div style="font-size:11px;color:var(--text-2);line-height:1.8">
-      Tome Score: <strong>${c.tomeScore??'—'}</strong> · Signal: <strong>${c.signal??'—'}</strong><br>
+      Tome Score: <strong>${c.tomeScore!=null?c.tomeScore.toFixed(1):'—'}</strong> · Signal: <strong>${c.signal??'—'}</strong><br>
       30d price updates: ${c.chgCount30d??'—'}
     </div>
     <a class="tcg-link" style="margin-top:16px;justify-content:center;display:flex;padding:9px" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener">Buy on TCGPlayer ↗</a>
