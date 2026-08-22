@@ -146,6 +146,12 @@ td{padding:9px 10px;vertical-align:middle;}
 .ci-wrap{position:relative;flex-shrink:0;display:block;line-height:0;cursor:pointer;}
 #hoverPreview{display:none;position:fixed;width:180px;height:auto;border-radius:8px;border:1px solid var(--border-str);box-shadow:0 8px 28px rgba(0,0,0,0.35);z-index:9999;background:var(--surface);pointer-events:none;}
 @media(hover:none){#hoverPreview{display:none !important;}}
+
+/* Column info tooltips */
+.info-ic{display:inline-flex;align-items:center;justify-content:center;margin-left:4px;width:13px;height:13px;border-radius:50%;background:var(--surface3);color:var(--text-3);font-size:9px;line-height:1;text-align:center;cursor:help;font-weight:700;vertical-align:middle;text-transform:none;letter-spacing:0;}
+.info-ic:hover{background:var(--green);color:#1a1a1a;}
+#infoTip{display:none;position:fixed;width:240px;font-size:11px;line-height:1.5;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-2);padding:9px 11px;border-radius:8px;border:1px solid var(--border-str);box-shadow:0 8px 28px rgba(0,0,0,0.35);z-index:9999;background:var(--surface);pointer-events:none;}
+@media(hover:none){#infoTip{display:none !important;}}
 .cn{font-weight:500;font-size:12px;line-height:1.3;}
 .cs{font-size:10px;color:var(--text-3);}
 .cnum{font-family:var(--mono);font-size:9px;color:var(--text-3);}
@@ -336,8 +342,8 @@ td{padding:9px 10px;vertical-align:middle;}
         <th data-col="p8" style="width:58px">PSA 8 est.<span class="arr">↕</span></th>
         <th data-col="p9" style="width:58px">PSA 9 est.<span class="arr">↕</span></th>
         <th data-col="p10" style="width:62px">PSA 10 est.<span class="arr">↕</span></th>
-        <th data-col="dispCrack" style="width:96px">Crack Profit<span class="arr">↕</span></th>
-        <th data-col="gradeProfit" style="width:100px">Grade Profit<span class="arr">↕</span></th>
+        <th data-col="dispCrack" style="width:96px">Crack Profit<span class="info-ic" data-tip="Profit from buying the PSA slab at its estimated price, cracking it out of the holder, and reselling the card raw. Accounts for crack yield loss (PSA 9 → ~92.5% NM, PSA 8 → ~77.5% NM) and your selected net sale rate. Basis follows the Crack vs. toggle above." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
+        <th data-col="gradeProfit" style="width:100px">Grade Profit<span class="info-ic" data-tip="Profit from buying this card raw now, sending it to PSA to grade, and it coming back a PSA 10. Sale proceeds at your net sale rate, minus the raw cost and the selected PSA grading fee." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="gradeROI" style="width:76px">Grade ROI<span class="arr">↕</span></th>
         <th data-col="mom" style="width:66px">30d Chg<span class="arr">↕</span></th>
         <th class="ns" style="width:72px">7d Trend</th>
@@ -372,6 +378,7 @@ td{padding:9px 10px;vertical-align:middle;}
   <div id="drawerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:400;"></div>
   <div id="drawer" style="display:none;position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--surface);border-left:0.5px solid var(--border-str);z-index:401;overflow-y:auto;padding:1.25rem;box-shadow:-8px 0 30px rgba(0,0,0,0.15);"></div>
   <img id="hoverPreview" alt=""/>
+  <div id="infoTip"></div>
 
   <div class="footer">
     <div>© Tome Collective · <a href="https://tomecollective.com" target="_blank">tomecollective.com</a> · Pricing data provided by <a href="https://justtcg.com" target="_blank" rel="noopener">JustTCG</a></div>
@@ -1011,6 +1018,30 @@ document.getElementById('tbody').addEventListener('mouseout', e => {
   if (!wrap) return;
   if (e.relatedTarget && wrap.contains(e.relatedTarget)) return;
   hoverPreview.style.display = 'none';
+});
+
+// ═══ COLUMN INFO TOOLTIPS (fixed-position, viewport-clamped — same reasoning as the
+// hover preview above: the sticky thead sits inside a scroll pane, so a pure-CSS absolute
+// tooltip would get clipped for headers near the pane's edges) ═════════════════════════
+const infoTip = document.getElementById('infoTip');
+document.querySelectorAll('.info-ic').forEach(ic => {
+  ic.addEventListener('mouseover', () => {
+    infoTip.textContent = ic.dataset.tip;
+    const r = ic.getBoundingClientRect();
+    infoTip.style.display = 'block';
+    infoTip.style.left = (r.left) + 'px';
+    infoTip.style.top = (r.bottom + 8) + 'px';
+    requestAnimationFrame(() => {
+      const tw = infoTip.offsetWidth || 240, th = infoTip.offsetHeight || 60;
+      let left = r.left;
+      if (left + tw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - tw - 8);
+      let top = r.bottom + 8;
+      if (top + th > window.innerHeight - 8) top = Math.max(8, r.top - th - 8);
+      infoTip.style.left = left + 'px';
+      infoTip.style.top = top + 'px';
+    });
+  });
+  ic.addEventListener('mouseout', () => { infoTip.style.display = 'none'; });
 });
 
 // ═══ INIT ══════════════════════════════════════════════════════════════════════
