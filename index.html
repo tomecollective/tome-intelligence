@@ -112,7 +112,12 @@ input[type=range]{accent-color:var(--green);cursor:pointer;}
 .pg-info{font-size:11px;color:var(--text-3);white-space:nowrap;min-width:150px;text-align:center;}
 
 /* Table */
-.tbl-outer{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
+/* scroll-margin-top leaves room for the sticky green .hdr bar (50px) when something calls
+   scrollIntoView() on this element (e.g. the pagination Next/Prev buttons) — otherwise the
+   browser scrolls the table flush to the very top of the viewport, and the frozen table
+   header (itself sticky at top:0 *within* this box) ends up rendered right behind the green
+   bar, invisible, since the green bar sits on top at a higher z-index. */
+.tbl-outer{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-lg);overflow:hidden;scroll-margin-top:60px;}
 /* overflow-x:auto alone silently makes overflow-y compute to auto too (CSS overflow spec),
    which breaks position:sticky on the header (its "nearest scroll container" becomes a box
    that never actually scrolls). Declaring both axes explicitly with a real max-height turns
@@ -121,11 +126,12 @@ input[type=range]{accent-color:var(--green);cursor:pointer;}
 .tbl-scroll{overflow:auto;max-height:calc(100vh - 260px);}
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:1180px;}
 thead tr{background:var(--surface2);border-bottom:0.5px solid var(--border-str);}
-/* top:50px, not 0 — the page's own .hdr bar is sticky at top:0 with z-index:300, so a thead
-   stuck at top:0 would scroll to the exact same viewport position and render hidden behind it
-   (the same clipping pattern as the original hover-preview bug). Offsetting by .hdr's 50px
-   height keeps the frozen table header visible just beneath the green nav bar. */
-th{padding:9px 10px;font-size:10px;font-weight:600;color:var(--text-3);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;letter-spacing:0.5px;text-transform:uppercase;position:sticky;top:50px;z-index:2;background:var(--surface2);box-shadow:0 1px 0 var(--border-str);}
+/* top:0 — thead is the first row in the table, so its natural (unscrolled) offset from the
+   scroll pane's own top is already 0. Any positive offset here (e.g. to dodge the green .hdr
+   bar above) forces the sticky constraint to activate immediately at rest, permanently
+   shoving the header down over row 1 even with no scrolling at all. top:0 keeps it flush
+   until the box is actually scrolled internally, which is when it should start "sticking". */
+th{padding:9px 10px;font-size:10px;font-weight:600;color:var(--text-3);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;letter-spacing:0.5px;text-transform:uppercase;position:sticky;top:0;z-index:2;background:var(--surface2);box-shadow:0 1px 0 var(--border-str);}
 th:hover,th.sorted{color:var(--text);}
 th .arr{margin-left:3px;opacity:0.3;font-size:9px;}
 th.sorted .arr{opacity:1;color:var(--green);}
@@ -347,7 +353,8 @@ td{padding:9px 10px;vertical-align:middle;}
       <span class="plbl">Rows per page:</span>
       <div class="seg" id="pageSizeSeg">
         <button class="sb" data-v="10">10</button>
-        <button class="sb active" data-v="50">50</button>
+        <button class="sb active" data-v="25">25</button>
+        <button class="sb" data-v="50">50</button>
         <button class="sb" data-v="100">100</button>
         <button class="sb" data-v="all">All</button>
       </div>
@@ -607,7 +614,7 @@ let watchOnly = false;
 let DATA = CARDS.map(compute);
 let gameF='', eraF='', setF='', sigF='', searchF='', minPrice=25;
 let sortCol='tomeScore', sortDir=-1, activePreset='holds';
-let pageSize = 50, currentPage = 1;   // pageSize is a number, or 'all'
+let pageSize = 25, currentPage = 1;   // pageSize is a number, or 'all'
 
 const PRESETS = {
   holds:  {col:'tomeScore',   dir:-1, sig:''},
