@@ -124,7 +124,12 @@ input[type=range]{accent-color:var(--green);cursor:pointer;}
    this into a genuine scroll pane, so the sticky header works and — as a bonus — degrades
    gracefully: with pagination keeping row counts low, most pages never need to scroll at all. */
 .tbl-scroll{overflow:auto;max-height:calc(100vh - 260px);}
-table{width:100%;border-collapse:collapse;font-size:12px;min-width:1180px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+/* min-width scoped to the main data table only — a bare `table` selector here would also
+   force this floor onto the small fee-tier table rendered inside the card detail drawer,
+   blowing its layout out to 1180px+ inside a ~380px-wide panel and pushing its value column
+   off the visible edge. */
+.tbl-scroll table{min-width:1180px;}
 thead tr{background:var(--surface2);border-bottom:0.5px solid var(--border-str);}
 /* top:0 — thead is the first row in the table, so its natural (unscrolled) offset from the
    scroll pane's own top is already 0. Any positive offset here (e.g. to dodge the green .hdr
@@ -233,7 +238,7 @@ td{padding:9px 10px;vertical-align:middle;}
       <div class="pg-sub">Cross-game TCG pricing intelligence across Pokémon, Lorcana, and One Piece, with grading and crack-profit analysis.</div>
       <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Powered by Tome Analytics</div>
       <div style="margin-top:6px;font-size:11px;color:var(--text-3);background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--gold);border-radius:6px;padding:6px 10px;max-width:640px;">
-      <strong style="color:var(--text-2)">Beta note:</strong> raw prices and 30-day momentum are live from JustTCG. PSA 8/9/10 values and population are era-calibrated model estimates until graded-data integration ships — treat crack and grade signals as directional.
+      <strong style="color:var(--text-2)">Beta note:</strong> raw prices and 30-day momentum are live from JustTCG. PSA 8/9/10 values and population are era-calibrated model estimates until graded-data integration ships — treat crack and grade signals as directional. Tome Score ranks near-term opportunity, not verified long-term appreciation — true hold/appreciation scoring needs population, rarity, and multi-year trend data we don't have yet, and is a planned future enhancement.
     </div>
     </div>
     <div class="pg-meta"><strong id="dateLabel"></strong>Live pricing · <span style="color:var(--gold);font-weight:600">BETA</span></div>
@@ -241,7 +246,7 @@ td{padding:9px 10px;vertical-align:middle;}
 
   <!-- Quick-sort chips -->
   <div class="chips" id="chips">
-    <button class="chip active" data-preset="holds"><span class="chip-icon">💎</span>Best Holds<span class="chip-count" id="cHolds">—</span></button>
+    <button class="chip active" data-preset="holds"><span class="chip-icon">🏆</span>Top Scores<span class="chip-count" id="cHolds">—</span></button>
     <button class="chip" data-preset="cracks"><span class="chip-icon">🔨</span>Best Cracks<span class="chip-count" id="cCracks">—</span></button>
     <button class="chip" data-preset="grades"><span class="chip-icon">🎯</span>Best Grades<span class="chip-count" id="cGrades">—</span></button>
     <button class="chip" data-preset="movers"><span class="chip-icon">📈</span>Biggest Movers<span class="chip-count" id="cMovers">—</span></button>
@@ -281,8 +286,8 @@ td{padding:9px 10px;vertical-align:middle;}
       <option value="">All Signals</option>
       <option value="Crack & Flip">Crack &amp; Flip</option>
       <option value="Grade Raw">Grade Raw</option>
-      <option value="Hold">Hold</option>
-      <option value="Accumulate">Accumulate</option>
+      <option value="Strong Score">Strong Score</option>
+      <option value="Watch">Watch</option>
       <option value="Skip">Skip</option>
     </select>
     <div class="sw">
@@ -319,10 +324,10 @@ td{padding:9px 10px;vertical-align:middle;}
   <div class="stats">
     <div class="stat"><div class="stat-lbl">Showing</div><div class="stat-val" id="sTot">—</div><div class="stat-sub">after filters</div></div>
     <div class="stat"><div class="stat-lbl">Crack targets</div><div class="stat-val" id="sCrack" style="color:var(--crack-fg)">—</div><div class="stat-sub">net positive</div></div>
-    <div class="stat"><div class="stat-lbl">Grade targets</div><div class="stat-val" id="sGrade" style="color:var(--grade-fg)">—</div><div class="stat-sub">clears fee</div></div>
-    <div class="stat"><div class="stat-lbl">Holds</div><div class="stat-val" id="sHold" style="color:var(--hold-fg)">—</div><div class="stat-sub">Tome Score 75+</div></div>
+    <div class="stat"><div class="stat-lbl">Grade targets</div><div class="stat-val" id="sGrade" style="color:var(--grade-fg)">—</div><div class="stat-sub">typical ROI ≥ 35%</div></div>
+    <div class="stat"><div class="stat-lbl">Top Scores</div><div class="stat-val" id="sHold" style="color:var(--hold-fg)">—</div><div class="stat-sub">Tome Score 75+</div></div>
     <div class="stat"><div class="stat-lbl">Best crack</div><div class="stat-val" id="sBC" style="color:var(--crack-fg)">—</div><div class="stat-sub" id="sBCN"></div></div>
-    <div class="stat"><div class="stat-lbl">Best grade ROI</div><div class="stat-val" id="sBG" style="color:var(--grade-fg)">—</div><div class="stat-sub" id="sBGN"></div></div>
+    <div class="stat"><div class="stat-lbl">Best max ROI</div><div class="stat-val" id="sBG" style="color:var(--grade-fg)">—</div><div class="stat-sub" id="sBGN"></div></div>
   </div>
 
   <!-- Table -->
@@ -336,16 +341,17 @@ td{padding:9px 10px;vertical-align:middle;}
         <th data-col="num" style="width:70px">Card #<span class="arr">↕</span></th>
         <th data-col="game" style="width:74px">Game<span class="arr">↕</span></th>
         <th data-col="era" style="width:66px">Era<span class="arr">↕</span></th>
-        <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="info-ic" data-tip="Tome Score (0–100) ranks how attractive a card is to hold. It weighs three things: estimated dollar upside from grading, 30-day price momentum, and entry price — higher scores mean stronger hold candidates. The exact weighting is proprietary and keeps evolving as our data improves." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↓</span></th>
-        <th data-col="signal" style="width:112px">Signal<span class="arr">↕</span></th>
+        <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="info-ic" data-tip="Tome Score (0–100) ranks how attractive a card looks for near-term action — not long-term price appreciation. It weighs three things: realistic (PSA 9-typical) grading upside, 30-day price momentum, and entry price — higher scores mean stronger short-term candidates. Long-term hold/appreciation scoring isn't supported yet (it needs population, rarity, and multi-year trend data we don't have) — that's a planned future enhancement. The exact weighting is proprietary and keeps evolving as our data improves." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↓</span></th>
+        <th data-col="signal" style="width:112px">Signal<span class="info-ic" data-tip="Crack & Flip: cracking a slab and reselling raw beats buying raw and grading it. Grade Raw: PSA 9-typical grading ROI clears a 35% minimum. Strong Score / Watch: doesn't clear a grading signal outright, but scores 75+ / 55+ on Tome Score. Skip: none of the above." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="raw" style="width:64px">Raw NM<span class="arr">↕</span></th>
         <th data-col="p8" style="width:58px">PSA 8 est.<span class="arr">↕</span></th>
         <th data-col="p9" style="width:58px">PSA 9 est.<span class="arr">↕</span></th>
         <th data-col="p10" style="width:62px">PSA 10 est.<span class="arr">↕</span></th>
         <th data-col="dispCrack" style="width:96px">Crack Profit<span class="info-ic" data-tip="Profit from buying the PSA slab at its estimated price, cracking it out of the holder, and reselling the card raw. Accounts for crack yield loss (PSA 9 → ~92.5% NM, PSA 8 → ~77.5% NM) and your selected net sale rate. Basis follows the Crack vs. toggle above." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
-        <th data-col="gradeProfit" style="width:100px">Grade Profit<span class="info-ic" data-tip="Profit from buying this card raw now, sending it to PSA to grade, and it coming back a PSA 10. Sale proceeds at your net sale rate, minus the raw cost and the selected PSA grading fee." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
-        <th data-col="gradeROI" style="width:76px">Grade ROI<span class="arr">↕</span></th>
+        <th data-col="gradeProfit" style="width:120px">Grade Profit<span class="info-ic" data-tip="Range of profit outcomes from buying this card raw now and sending it to PSA, depending on what grade it actually comes back as: PSA 8 (floor) to PSA 10 (ceiling). Sale proceeds at your net sale rate, minus the raw cost and the selected PSA grading fee. A raw card doesn't always come back a 10 — see the card detail panel for the typical (PSA 9) outcome specifically." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
+        <th data-col="gradeROI" style="width:96px">Max Grade ROI<span class="info-ic" data-tip="Best-case ROI if the raw card comes back a perfect PSA 10 — a ceiling, not an expectation. Most raw cards don't grade a 10. Check the Grade Profit range and the card detail panel for the more realistic PSA 8/9 outcomes." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="mom" style="width:66px">30d Chg<span class="arr">↕</span></th>
+        <th data-col="chgCount30d" style="width:70px">Volume<span class="info-ic" data-tip="Number of recorded price-change events on this card in the last 30 days, from JustTCG — a rough proxy for trading activity, not a literal sales count. Low or zero volume often means thin liquidity, and 30d Chg may be unreliable or missing for these cards." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th class="ns" style="width:72px">7d Trend</th>
         <th class="ns" style="width:80px">TCGPlayer</th>
       </tr></thead>
@@ -382,7 +388,7 @@ td{padding:9px 10px;vertical-align:middle;}
 
   <div class="footer">
     <div>© Tome Collective · <a href="https://tomecollective.com" target="_blank">tomecollective.com</a> · Pricing data provided by <a href="https://justtcg.com" target="_blank" rel="noopener">JustTCG</a></div>
-    <div class="disclaimer">Informational only — not investment or financial advice. Grade profit assumes a PSA 10 result; outcomes vary by card condition and centering. Cracking slabs is irreversible. Crack values apply condition haircuts (PSA 9 → ~92.5% of NM raw, PSA 8 → ~77.5%) and your selected net sale rate. Cards under $10 are excluded. Era classifications (Vintage / Modern) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a> — Modern is XY forward, Vintage is anything before XY. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
+    <div class="disclaimer">Informational only — not investment or financial advice. Grade Profit shows a range across possible outcomes (PSA 8 floor to PSA 10 ceiling); Max Grade ROI is the PSA 10 best case, not an expectation — actual grading outcomes vary by card condition and centering, and most raw cards do not come back a 10. Cracking slabs is irreversible. Crack values apply condition haircuts (PSA 9 → ~92.5% of NM raw, PSA 8 → ~77.5%) and your selected net sale rate. Cards under $10 are excluded. Era classifications (Vintage / Modern) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a> — Modern is XY forward, Vintage is anything before XY. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
   </div>
 </div>
 
@@ -393,6 +399,13 @@ let PSA_FEE = 25;
 let CRACK_BASIS = '8';   // '9' | '8' | 'best' — which slab the Crack Profit column benchmarks
 const CRACK_YIELD_P9 = 0.925;  // cracked 9 markets as NM-/LP+
 const CRACK_YIELD_P8 = 0.775;  // cracked 8 markets as LP
+// "Grade Raw" signal threshold, in %, measured against PSA 9 ("typical") ROI — not PSA 10.
+// Gating on the PSA 10 ceiling made every card in the catalog qualify (min observed ROI was
+// +307%), so Hold/Accumulate were mathematically unreachable. 35 sits almost exactly at the
+// catalog's own PSA-9-basis median (measured 34.9% across 1,400 live cards), so roughly half
+// of cards that clear breakeven actually earn the "Grade Raw" call — the rest fall through to
+// be scored as Tome Score candidates instead.
+const GRADE_ROI_THRESHOLD = 35;
 const HARD_PRICE_FLOOR = 10;   // cards below this are excluded at the data layer (matches the $10+ display floor)
 
 const TCG = 'https://www.tcgplayer.com/search/all/product';
@@ -615,8 +628,18 @@ function compute(r) {
   const crackP8 = parseFloat((cv8 - r.p8).toFixed(2));
   const bestCrack = Math.max(crackP8, crackP9);
   const crackFrom = bestCrack === crackP8 ? '8' : '9';
-  const gradeProfit = parseFloat(((r.p10 * SALE_RATE) - r.raw - PSA_FEE).toFixed(2));
-  const gradeROI = r.raw > 0 ? parseFloat((gradeProfit / r.raw * 100).toFixed(1)) : 0;
+
+  // Grade profit at three outcomes, not one: PSA 8 (floor — worst realistic grade), PSA 9
+  // (typical — the middle, most-common outcome), PSA 10 (ceiling — best case). Same raw cost,
+  // fee, and sale rate throughout; only the returned grade differs. A raw card doesn't always
+  // come back a 10 — showing only the PSA 10 number (the old, single "Grade Profit" figure)
+  // overstated every card's realistic upside. Signal-gating and the Tome Score value factor
+  // below use the PSA 9 "typical" figure, not the PSA 10 ceiling.
+  const gradeProfitFloor   = parseFloat(((r.p8  * SALE_RATE) - r.raw - PSA_FEE).toFixed(2));
+  const gradeProfitTypical = parseFloat(((r.p9  * SALE_RATE) - r.raw - PSA_FEE).toFixed(2));
+  const gradeProfit        = parseFloat(((r.p10 * SALE_RATE) - r.raw - PSA_FEE).toFixed(2)); // ceiling / best case (PSA 10)
+  const gradeROI     = r.raw > 0 ? parseFloat((gradeProfit / r.raw * 100).toFixed(1))        : null; // "Max Grade ROI" — PSA 10 ceiling
+  const typicalROI   = r.raw > 0 ? parseFloat((gradeProfitTypical / r.raw * 100).toFixed(1)) : null;
   const mult = r.p10 / r.raw;
 
   // Three-factor Tome Score (v4): PSA 10 pop scoring removed entirely (population data
@@ -638,9 +661,13 @@ function compute(r) {
   // tsMom. That keeps "unknown" from ever being scored as either a confirmed win or loss,
   // and decouples its treatment from wherever tsMom's own curve happens to sit at x=0 —
   // which will drift as that curve gets retuned, but "no data = neutral" shouldn't.
+  // tsValue now runs on gradeProfitTypical (PSA 9), not the PSA 10 ceiling — same reasoning
+  // as the signal fix below: the ceiling doesn't discriminate (it's positive for virtually
+  // every card), so it wasn't telling the score anything real about which cards are actually
+  // worth short-term attention.
   const momScore = r.mom == null ? 50 : tsMom(r.mom);
   const tomeScore = Math.round((
-    tsValue(gradeProfit) * 0.40 +
+    tsValue(gradeProfitTypical) * 0.40 +
     momScore * 0.40 +
     tsEnt(r.raw) * 0.20
   ) * 10) / 10;
@@ -649,13 +676,22 @@ function compute(r) {
   const dispCrack = CRACK_BASIS==='8' ? crackP8 : CRACK_BASIS==='9' ? crackP9 : bestCrack;
   const dispFrom  = CRACK_BASIS==='8' ? '8' : CRACK_BASIS==='9' ? '9' : crackFrom;
 
+  // Signal chain (fixed). The old chain gated "Grade Raw" on gradeProfit > 0 using the PSA 10
+  // ceiling — which is positive for essentially every card in the catalog (every era estimate
+  // multiplies raw price well past breakeven, min observed ROI was +307%), so Grade Raw fired
+  // on 100% of cards and Hold/Accumulate were mathematically unreachable no matter what a
+  // card's Tome Score was. Gating now runs on the PSA 9 "typical" ROI, with a minimum-ROI
+  // floor (GRADE_ROI_THRESHOLD) so "Grade Raw" means "clears a real, chosen bar" rather than
+  // "isn't negative." Cards that don't clear it fall through to be evaluated by Tome Score
+  // instead, which is what makes the score-based tiers below reachable again.
   let signal = 'Skip';
   if (dispCrack > 0) signal = 'Crack & Flip';
-  else if (gradeProfit > 0) signal = 'Grade Raw';
-  else if (tomeScore >= 75) signal = 'Hold';
-  else if (tomeScore >= 55) signal = 'Accumulate';
+  else if (typicalROI != null && typicalROI >= GRADE_ROI_THRESHOLD) signal = 'Grade Raw';
+  else if (tomeScore >= 75) signal = 'Strong Score';
+  else if (tomeScore >= 55) signal = 'Watch';
 
-  return {...r, crackP8, crackP9, bestCrack, crackFrom, dispCrack, dispFrom, gradeProfit, gradeROI,
+  return {...r, crackP8, crackP9, bestCrack, crackFrom, dispCrack, dispFrom,
+          gradeProfitFloor, gradeProfitTypical, gradeProfit, gradeROI, typicalROI,
           mult:parseFloat(mult.toFixed(1)), tomeScore, signal};
 }
 
@@ -718,30 +754,31 @@ const tsCls = s => s>=75?'ts-e':s>=55?'ts-s':s>=35?'ts-w':'ts-x';
 const gameCls = g => g==='Pokemon'?'gp':g==='Lorcana'?'gl':'go';
 const SIG = {
   'Crack & Flip':{c:'s-crack',i:'🔨'},'Grade Raw':{c:'s-grade',i:'🎯'},
-  'Hold':{c:'s-hold',i:'💎'},'Accumulate':{c:'s-accum',i:'📈'},'Skip':{c:'s-skip',i:'—'},
+  'Strong Score':{c:'s-hold',i:'🔥'},'Watch':{c:'s-accum',i:'👀'},'Skip':{c:'s-skip',i:'—'},
 };
 
 function updateChipCounts() {
   const base = DATA.filter(c => c.raw >= minPrice);
   document.getElementById('cHolds').textContent  = base.filter(c=>c.tomeScore>=75).length;
   document.getElementById('cCracks').textContent = base.filter(c=>c.dispCrack>0).length;
-  document.getElementById('cGrades').textContent = base.filter(c=>c.gradeProfit>0).length;
+  document.getElementById('cGrades').textContent = base.filter(c=>c.signal==='Grade Raw').length;
   document.getElementById('cMovers').textContent = base.filter(c=>c.mom!=null && Math.abs(c.mom)>=0.20).length;
   document.getElementById('cWatch').textContent = WATCHLIST.size;
 }
 
 function updateStats(rows) {
   document.getElementById('sTot').textContent = rows.length;
-  const cracks = rows.filter(c=>c.dispCrack>0), grades = rows.filter(c=>c.gradeProfit>0);
+  const cracks = rows.filter(c=>c.dispCrack>0);
+  const grades = rows.filter(c=>c.signal==='Grade Raw');
   const holds = rows.filter(c=>c.tomeScore>=75);
   document.getElementById('sCrack').textContent = cracks.length;
   document.getElementById('sGrade').textContent = grades.length;
   document.getElementById('sHold').textContent = holds.length;
-  const bc = cracks.sort((a,b)=>b.dispCrack-a.dispCrack)[0];
-  const bg = grades.sort((a,b)=>b.gradeROI-a.gradeROI)[0];
+  const bc = cracks.slice().sort((a,b)=>b.dispCrack-a.dispCrack)[0];
+  const bg = rows.slice().sort((a,b)=>(b.gradeROI??-Infinity)-(a.gradeROI??-Infinity))[0];
   document.getElementById('sBC').textContent = bc?f$(bc.dispCrack):'—';
   document.getElementById('sBCN').textContent = bc?bc.name:'';
-  document.getElementById('sBG').textContent = bg?'+'+bg.gradeROI+'%':'—';
+  document.getElementById('sBG').textContent = (bg&&bg.gradeROI!=null)?'+'+bg.gradeROI+'%':'—';
   document.getElementById('sBGN').textContent = bg?bg.name:'';
   document.getElementById('fcount').textContent = rows.length + ' cards';
 }
@@ -767,7 +804,7 @@ function render() {
 
   const tbody = document.getElementById('tbody');
   if (!allRows.length) {
-    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px">No cards match your filters. Try lowering the minimum price or clearing filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px">No cards match your filters. Try lowering the minimum price or clearing filters.</td></tr>';
     updatePagebar(0, totalPages);
     return;
   }
@@ -793,9 +830,10 @@ function render() {
       <td class="mono">${c.p9==null?'—':f$(c.p9)}</td>
       <td class="mono">${c.p10==null?'—':f$(c.p10)}</td>
       <td>${c.dispCrack==null?'—':`<div class="pc"><span class="pa ${pCls(c.dispCrack)}">${f$(c.dispCrack)}</span><span class="pl">vs PSA ${c.dispFrom} slab</span></div>`}</td>
-      <td>${c.gradeProfit==null?'—':`<div class="pc"><span class="pa ${pCls(c.gradeProfit)}">${f$(c.gradeProfit)}</span><span class="pl">10 × ${(SALE_RATE*100).toFixed(0)}% − raw − $${PSA_FEE}</span></div>`}</td>
+      <td>${c.gradeProfitFloor==null?'—':`<div class="pc"><span class="pa ${pCls(c.gradeProfitTypical)}">${f$(c.gradeProfitFloor)} to ${f$(c.gradeProfit)}</span><span class="pl">PSA 8→10 · typical ${f$(c.gradeProfitTypical)}</span></div>`}</td>
       <td class="mono ${c.gradeROI>0?'up':c.gradeROI<0?'dn':'fl'}">${c.gradeROI==null?'—':(c.gradeROI>0?'+':'')+c.gradeROI+'%'}</td>
       <td class="mono ${momCls(c.mom)}">${fPct(c.mom)}</td>
+      <td class="mono" style="color:var(--text-3)">${c.chgCount30d}</td>
       <td>${sparkline(c.h7)}</td>
       <td><a class="tcg-link" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Buy Raw ↗</a></td>
     </tr>`;
@@ -967,7 +1005,7 @@ async function openDrawer(id) {
   const starred = WATCHLIST.has(c.id);
   const feeRows = [25,75,150].map(f => {
     const gp = c.p10==null?null:parseFloat(((c.p10*SALE_RATE)-c.raw-f).toFixed(2));
-    return `<tr><td style="padding:4px 8px;font-size:11px;color:var(--text-2)">$${f} fee</td><td style="padding:4px 8px;font-family:var(--mono);font-size:11px" class="${gp>0?'up':'dn'}">${gp==null?'—':f$(gp)}</td></tr>`;
+    return `<tr><td style="padding:4px 8px;font-size:11px;color:var(--text-2)">$${f} fee</td><td style="padding:4px 8px;font-family:var(--mono);font-size:11px;text-align:right" class="${gp>0?'up':'dn'}">${gp==null?'—':f$(gp)}</td></tr>`;
   }).join('');
   d.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
@@ -996,8 +1034,9 @@ async function openDrawer(id) {
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 8</div><span class="mono ${pCls(c.crackP8)}">${f$(c.crackP8)}</span></div>
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 9</div><span class="mono ${pCls(c.crackP9)}">${f$(c.crackP9)}</span></div>
     </div>
-    <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Grade Profit by Fee Tier</div>
-    <table style="width:100%;border-collapse:collapse;background:var(--surface2);border-radius:6px;overflow:hidden">${feeRows}</table>`:''}
+    <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Max Grade Profit by Fee Tier (PSA 10 ceiling)</div>
+    <table style="width:100%;table-layout:fixed;border-collapse:collapse;background:var(--surface2);border-radius:6px;overflow:hidden">${feeRows}</table>
+    <div style="margin-top:6px;font-size:10px;color:var(--text-3)">Typical outcome (PSA 9, current fee): <strong class="${pCls(c.gradeProfitTypical)}" style="font-family:var(--mono)">${f$(c.gradeProfitTypical)}</strong> · Floor (PSA 8): <strong class="${pCls(c.gradeProfitFloor)}" style="font-family:var(--mono)">${f$(c.gradeProfitFloor)}</strong></div>`:''}
     <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Data</div>
     <div style="font-size:11px;color:var(--text-2);line-height:1.8">
       Tome Score: <strong>${c.tomeScore!=null?c.tomeScore.toFixed(1):'—'}</strong> · Signal: <strong>${c.signal??'—'}</strong><br>
@@ -1098,7 +1137,7 @@ document.querySelectorAll('.info-ic').forEach(ic => {
 document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
 document.getElementById('tbody').innerHTML =
-  '<tr><td colspan="19" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+  '<tr><td colspan="20" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
   '<div style="width:26px;height:26px;border:2.5px solid var(--border-str);border-top-color:var(--green);border-radius:50%;animation:tspin 0.7s linear infinite;margin:0 auto 0.75rem"></div>' +
   'Loading live pricing from JustTCG…</td></tr>' +
   '<style>@keyframes tspin{to{transform:rotate(360deg)}}</style>';
@@ -1108,7 +1147,7 @@ document.getElementById('tbody').innerHTML =
     const { cards, errors } = await loadLiveData();
     if (!cards.length) {
       document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="19" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+        '<tr><td colspan="20" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
         'Could not load card data.' + (errors.length ? '<br><span style="font-size:11px">' + errors.join(' · ') + '</span>' : '') +
         '<br><span style="font-size:11px">Check the worker URL and try refreshing.</span></td></tr>';
       return;
@@ -1130,7 +1169,7 @@ document.getElementById('tbody').innerHTML =
     }
   } catch (err) {
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="19" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+      '<tr><td colspan="20" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
       'Failed to load data: ' + err.message + '</td></tr>';
   }
 })();
