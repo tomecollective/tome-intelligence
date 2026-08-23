@@ -80,6 +80,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .pr-dollar{font-size:12px;color:var(--text-3);}
 .pr-sep{font-size:11px;color:var(--text-3);}
 .pr-input{width:64px;padding:5px 7px;border:0.5px solid var(--border-str);border-radius:var(--r);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:12px;outline:none;}
+/* Wider than the base .pr-input — its placeholder ("Min $25") is doing double duty as both
+   a hint and the de facto floor: there's no live data below $25 today, so leaving it blank
+   is how someone accepts that default, and only needs to type over it to raise the bar. */
+.pr-input-min{width:80px;}
 .pr-input:focus{border-color:var(--green);background:var(--surface);}
 /* Chrome/Safari number-input spinners take up space and rarely help with a 3-4 digit price
    filter — hiding them keeps the two fields visually matched to the other filter controls. */
@@ -247,7 +251,7 @@ td{padding:9px 10px;vertical-align:middle;}
       <div class="pg-sub">Cross-game TCG pricing intelligence across Pokémon, Lorcana, and One Piece, with grading and crack-profit analysis.</div>
       <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Powered by Tome Analytics</div>
       <div style="margin-top:6px;font-size:11px;color:var(--text-3);background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--gold);border-radius:6px;padding:6px 10px;max-width:640px;">
-      <strong style="color:var(--text-2)">Beta note:</strong> raw prices and 30-day momentum are live from JustTCG. PSA 8/9/10 values and population are era-calibrated model estimates until graded-data integration ships — treat crack and grade signals as directional. Tome Score ranks near-term opportunity, not verified long-term appreciation — true hold/appreciation scoring needs population, rarity, and multi-year trend data we don't have yet, and is a planned future enhancement.
+      <strong style="color:var(--text-2)">Beta note:</strong> raw prices and 30-day momentum are live from JustTCG. PSA 7/8/9 prices are real JustTCG market data where available (a "~" prefix means JustTCG had no listing for that card and grade, so it falls back to an era-calibrated estimate instead). PSA 10 and population remain model estimates until further graded-data integration — treat grade signals as directional. Tome Score ranks near-term opportunity, not verified long-term appreciation — true hold/appreciation scoring needs population, rarity, and multi-year trend data we don't have yet, and is a planned future enhancement.
     </div>
     </div>
     <div class="pg-meta"><strong id="dateLabel"></strong>Live pricing · <span style="color:var(--gold);font-weight:600">BETA</span></div>
@@ -283,7 +287,7 @@ td{padding:9px 10px;vertical-align:middle;}
     <div class="fdiv"></div>
     <div class="fgroup"><span class="flbl">Price</span>
       <div class="prange">
-        <span class="pr-dollar">$</span><input type="number" id="minPriceInput" class="pr-input" placeholder="Min" value="25" min="0" step="1" inputmode="numeric">
+        <input type="number" id="minPriceInput" class="pr-input pr-input-min" placeholder="Min $25" min="0" step="1" inputmode="numeric">
         <span class="pr-sep">–</span>
         <span class="pr-dollar">$</span><input type="number" id="maxPriceInput" class="pr-input" placeholder="Max" min="0" step="1" inputmode="numeric">
       </div>
@@ -323,9 +327,9 @@ td{padding:9px 10px;vertical-align:middle;}
     <div class="seg" id="crackSeg">
       <button class="fee-btn" data-v="9">PSA 9</button>
       <button class="fee-btn active" data-v="8">PSA 8</button>
-      <button class="fee-btn" data-v="best">Best</button>
+      <button class="fee-btn" data-v="7">PSA 7</button>
     </div>
-    <span class="pnote">eBay ~85% · TCGPlayer ~87% · Buylist ~65% · Crack yields: PSA 9→92.5% NM, PSA 8→77.5% NM</span>
+    <span class="pnote">eBay ~85% · TCGPlayer ~87% · Buylist ~65% · Cracked cards are valued at full NM raw price, net of your sale rate</span>
   </div>
 
   <!-- Stats -->
@@ -352,10 +356,11 @@ td{padding:9px 10px;vertical-align:middle;}
         <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="info-ic" data-tip="Tome Score (0–100) ranks how attractive a card looks for near-term action — not long-term price appreciation. It weighs three things: realistic (PSA 9-typical) grading upside, 30-day price momentum, and entry price — higher scores mean stronger short-term candidates. Long-term hold/appreciation scoring isn't supported yet (it needs population, rarity, and multi-year trend data we don't have) — that's a planned future enhancement. The exact weighting is proprietary and keeps evolving as our data improves." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↓</span></th>
         <th data-col="signal" style="width:112px">Signal<span class="info-ic" data-tip="Crack & Flip: cracking a slab and reselling raw beats buying raw and grading it. Grade Raw: PSA 9-typical grading ROI clears a 35% minimum. Strong Score / Watch: doesn't clear a grading signal outright, but scores 75+ / 55+ on Tome Score. Skip: none of the above." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="raw" style="width:64px">Raw NM<span class="arr">↕</span></th>
-        <th data-col="p8" style="width:58px">PSA 8 est.<span class="arr">↕</span></th>
-        <th data-col="p9" style="width:58px">PSA 9 est.<span class="arr">↕</span></th>
+        <th data-col="p7" style="width:58px">PSA 7<span class="info-ic" data-tip="Real PSA 7 market price from JustTCG when available. Blank (—) means JustTCG has no PSA 7 listing for this card yet — there's no fallback estimate for this grade." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
+        <th data-col="p8" style="width:64px">PSA 8<span class="info-ic" data-tip="Real PSA 8 market price from JustTCG when available. A '~' prefix means JustTCG has no PSA 8 listing for this card yet, so this falls back to an era-calibrated estimate instead." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
+        <th data-col="p9" style="width:64px">PSA 9<span class="info-ic" data-tip="Real PSA 9 market price from JustTCG when available. A '~' prefix means JustTCG has no PSA 9 listing for this card yet, so this falls back to an era-calibrated estimate instead." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="p10" style="width:62px">PSA 10 est.<span class="arr">↕</span></th>
-        <th data-col="dispCrack" style="width:96px">Crack Profit<span class="info-ic" data-tip="Profit from buying the PSA slab at its estimated price, cracking it out of the holder, and reselling the card raw. Accounts for crack yield loss (PSA 9 → ~92.5% NM, PSA 8 → ~77.5% NM) and your selected net sale rate. Basis follows the Crack vs. toggle above." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
+        <th data-col="dispCrack" style="width:96px">Crack Profit<span class="info-ic" data-tip="Profit from buying the PSA slab at its market price, cracking it out of the holder, and reselling the card at full NM raw pricing, net of your selected net sale rate. Basis follows the Crack vs. toggle above." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="gradeProfit" style="width:120px">Grade Profit<span class="info-ic" data-tip="Range of profit outcomes from buying this card raw now and sending it to PSA, depending on what grade it actually comes back as: PSA 8 (floor) to PSA 10 (ceiling). Sale proceeds at your net sale rate, minus the raw cost and the selected PSA grading fee. A raw card doesn't always come back a 10 — see the card detail panel for the typical (PSA 9) outcome specifically." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="gradeROI" style="width:96px">Max Grade ROI<span class="info-ic" data-tip="Best-case ROI if the raw card comes back a perfect PSA 10 — a ceiling, not an expectation. Most raw cards don't grade a 10. Check the Grade Profit range and the card detail panel for the more realistic PSA 8/9 outcomes." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="mom" style="width:66px">30d Chg<span class="arr">↕</span></th>
@@ -396,7 +401,7 @@ td{padding:9px 10px;vertical-align:middle;}
 
   <div class="footer">
     <div>© Tome Collective · <a href="https://tomecollective.com" target="_blank">tomecollective.com</a> · Pricing data provided by <a href="https://justtcg.com" target="_blank" rel="noopener">JustTCG</a></div>
-    <div class="disclaimer">Informational only — not investment or financial advice. Grade Profit shows a range across possible outcomes (PSA 8 floor to PSA 10 ceiling); Max Grade ROI is the PSA 10 best case, not an expectation — actual grading outcomes vary by card condition and centering, and most raw cards do not come back a 10. Cracking slabs is irreversible. Crack values apply condition haircuts (PSA 9 → ~92.5% of NM raw, PSA 8 → ~77.5%) and your selected net sale rate. Cards under $10 are excluded. Era classifications (Vintage / Modern) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a> — Modern is XY forward, Vintage is anything before XY. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
+    <div class="disclaimer">Informational only — not investment or financial advice. PSA 7/8/9 prices are real JustTCG market data where available, falling back to an era-calibrated estimate (marked "~") when JustTCG has no listing for that card and grade; PSA 10 remains a model estimate for every card. Grade Profit shows a range across possible outcomes (PSA 8 floor to PSA 10 ceiling); Max Grade ROI is the PSA 10 best case, not an expectation — actual grading outcomes vary by card condition and centering, and most raw cards do not come back a 10. Cracking slabs is irreversible. Crack Profit assumes the cracked card resells at full NM raw pricing, net of your selected net sale rate — actual resale value can vary with real condition and centering. Cards under $10 are excluded. Era classifications (Vintage / Modern) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a> — Modern is XY forward, Vintage is anything before XY. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
   </div>
 </div>
 
@@ -404,9 +409,13 @@ td{padding:9px 10px;vertical-align:middle;}
 // ═══ CONFIG ════════════════════════════════════════════════════════════════════
 let SALE_RATE = 0.80;
 let PSA_FEE = 25;
-let CRACK_BASIS = '8';   // '9' | '8' | 'best' — which slab the Crack Profit column benchmarks
-const CRACK_YIELD_P9 = 0.925;  // cracked 9 markets as NM-/LP+
-const CRACK_YIELD_P8 = 0.775;  // cracked 8 markets as LP
+let CRACK_BASIS = '8';   // '9' | '8' | '7' — which PSA slab the Crack Profit column benchmarks
+// Cracking a slab returns a raw card, and once it's out of the holder it sells on the raw
+// market like any other raw card — buyers of raw singles aren't grading it. So a cracked
+// card is valued at full NM raw price, not some fraction of it. (A prior version applied a
+// PSA-9→92.5%/PSA-8→77.5% "condition haircut" here, treating a cracked slab as worth less
+// than NM; that's not how the raw market actually prices these.) Net sale rate is what
+// actually eats into the return on the way out.
 // "Grade Raw" signal threshold, in %, measured against PSA 9 ("typical") ROI — not PSA 10.
 // Gating on the PSA 10 ceiling made every card in the catalog qualify (min observed ROI was
 // +307%), so Hold/Accumulate were mathematically unreachable. 35 sits almost exactly at the
@@ -461,9 +470,11 @@ function classifyEra(game, setId) {
 }
 
 // ── Graded-value estimation (BETA) ──────────────────────────────────────────────
-// PSA 8/9/10 prices and population are MODEL ESTIMATES until the graded-data
-// integration (PriceCharting) ships. Estimates are era-calibrated averages and
-// exist so the signal engine runs end-to-end; they are flagged in the UI.
+// PSA 7/8/9 are now backed by real per-card JustTCG graded prices (see
+// enrichWithRealGradedPrices below) whenever JustTCG has a graded listing for that
+// card. These era-calibrated multipliers are the FALLBACK for p8/p9 only, used when
+// live data is missing for a specific card — and the ONLY source for p10, which isn't
+// fetched live (out of scope for now; every card's PSA 10 stays a model estimate).
 const EST = {
   vintage: { p10: 7.0, p9: 2.1, p8: 1.25 },
   modern:  { p10: 5.5, p9: 1.7, p8: 1.05 },
@@ -510,7 +521,12 @@ function mapCard(apiCard, game) {
     set: setName,
     num: apiCard.number && apiCard.number !== 'N/A' ? apiCard.number : '—',
     raw,
-    p8: est.p8, p9: est.p9, p10: est.p10,
+    // p7 has no estimate fallback (EST never had a p7 multiplier) — null until/unless
+    // enrichWithRealGradedPrices finds a live JustTCG PSA 7 listing for this card.
+    // p8/p9 start on the era-calibrated estimate and get overwritten with real prices
+    // (and pXLive flipped true) during that same enrichment pass, when available.
+    p7: null, p8: est.p8, p9: est.p9, p10: est.p10,
+    p7Live: false, p8Live: false, p9Live: false,
     gem: null,
     // JustTCG returns priceChange30d as a percentage; normalize to decimal. Kept as `null`
     // (not coerced to 0) when JustTCG has no value — the old `|| 0` fallback made "no data"
@@ -595,6 +611,93 @@ async function loadLiveData() {
   return { cards, errors };
 }
 
+// ═══ GRADED-DATA ENRICHMENT (real PSA 7/8/9 prices) ═════════════════════════════
+// Runs AFTER the raw catalog loads and renders, in the background, one JustTCG API
+// call per card — the v2 graded endpoint is a single-card lookup, there's no bulk/
+// batch option live yet (see the worker's /v2/cards passthrough). Bounded
+// concurrency keeps this polite to both the worker's edge cache and JustTCG's own
+// rate limits. A card whose lookup fails or comes back empty just keeps its era-
+// calibrated estimate (see EST above) — this never blocks or breaks the initial
+// render, and a full enrichment failure degrades to exactly today's estimate-only
+// behavior.
+const GRADE_FETCH_CONCURRENCY = 8;
+
+// VERIFIED against a live response (2026-08-23). Envelope is {data:[card]} — a single-
+// element array, since one card_id was asked for — with the card's `variants` array
+// holding both raw and graded entries. Confirmed price lives at markets[].price, and
+// the market's region key is "US" (not "NA" as first guessed — kept as a fallback below
+// in case that varies by card). This filter — company === 'PSA' && grade in {7,8,9} — is
+// applied here, client-side, deliberately: see fetchGradedPSA below for why.
+function parseGradedResponse(json) {
+  if (!json) return null;
+  const card = Array.isArray(json.data) ? json.data[0] : (json.data || json);
+  if (!card || !Array.isArray(card.variants)) return null;
+  const out = {};
+  for (const v of card.variants) {
+    if (v.type !== 'graded' || v.grading?.company !== 'PSA') continue;
+    const grade = v.grading?.grade;
+    const price = v.markets?.find(m => m.region === 'US')?.price ?? v.markets?.[0]?.price;
+    if (price == null) continue;
+    if (grade === 7) out.p7 = parseFloat(price);
+    else if (grade === 8) out.p8 = parseFloat(price);
+    else if (grade === 9) out.p9 = parseFloat(price);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+async function fetchGradedPSA(cardId) {
+  try {
+    // Deliberately NOT passing grading_company/grade filters, even though JustTCG's
+    // docs describe them as supported. Verified live: grading_company is silently
+    // ignored server-side (asking for PSA still returns whatever company IS on file),
+    // and adding a grade filter for grades the card has no data for returns null-price
+    // placeholder rows instead of omitting them — which would make every card look like
+    // "checked, no data" instead of "not asked". Requesting `graded=only` with no further
+    // filter returns only the graded variants that actually have data, of whatever
+    // company/grade JustTCG has on file; parseGradedResponse then keeps just PSA 7/8/9.
+    // Same cost either way (graded=only is 1 call regardless of filters).
+    const res = await fetch(
+      `${WORKER_URL}/v2/cards?card_id=${encodeURIComponent(cardId)}&graded=only`
+    );
+    if (!res.ok) return null;
+    return parseGradedResponse(await res.json());
+  } catch (e) {
+    return null;   // network hiccup on one card isn't worth surfacing — estimate stands in
+  }
+}
+
+// Simple bounded-concurrency runner — no external deps, just enough to avoid firing
+// ~1,400 requests at once.
+async function mapWithConcurrency(items, limit, fn) {
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+// Mutates each card in place with real PSA 7/8/9 prices where JustTCG has them.
+// onProgress(done, total, liveCards) fires after every card so the caller can update
+// a status line and periodically re-render as real data streams in.
+async function enrichWithRealGradedPrices(cards, onProgress) {
+  let done = 0, liveCards = 0;
+  await mapWithConcurrency(cards, GRADE_FETCH_CONCURRENCY, async (c) => {
+    const g = await fetchGradedPSA(c.id);
+    done++;
+    if (g) {
+      liveCards++;
+      if (g.p7 != null) { c.p7 = g.p7; c.p7Live = true; }
+      if (g.p8 != null) { c.p8 = g.p8; c.p8Live = true; }
+      if (g.p9 != null) { c.p9 = g.p9; c.p9Live = true; }
+    }
+    if (onProgress) onProgress(done, cards.length, liveCards);
+  });
+  return liveCards;
+}
+
 // ═══ SCORING ═══════════════════════════════════════════════════════════════════
 // Piecewise-linear interpolation between anchor points (clamped at the ends), used
 // in place of hard tiers. Hard tiers meant any two cards landing in the same bucket
@@ -630,12 +733,14 @@ const tsMom   = m  => lerp(m,  [[-0.30,5],[-0.15,20],[-0.05,40],[0.05,60],[0.10,
 const tsEnt   = p  => lerp(p,  [[0,100],[5,100],[15,80],[40,60],[100,40],[250,20],[600,5]]);
 
 function compute(r) {
-  const cv9 = r.raw * CRACK_YIELD_P9 * SALE_RATE;
-  const cv8 = r.raw * CRACK_YIELD_P8 * SALE_RATE;
-  const crackP9 = parseFloat((cv9 - r.p9).toFixed(2));
-  const crackP8 = parseFloat((cv8 - r.p8).toFixed(2));
-  const bestCrack = Math.max(crackP8, crackP9);
-  const crackFrom = bestCrack === crackP8 ? '8' : '9';
+  // Cracked card sells at full NM raw price, net of the sale rate — see the CRACK_BASIS
+  // comment above for why there's no separate condition haircut here.
+  const cv = r.raw * SALE_RATE;
+  const crackP9 = parseFloat((cv - r.p9).toFixed(2));
+  const crackP8 = parseFloat((cv - r.p8).toFixed(2));
+  // p7 has no fallback estimate — only ever set from a real JustTCG lookup — so unlike
+  // crackP8/crackP9 this can genuinely be null for a card enrichment hasn't reached yet.
+  const crackP7 = r.p7 != null ? parseFloat((cv - r.p7).toFixed(2)) : null;
 
   // Grade profit at three outcomes, not one: PSA 8 (floor — worst realistic grade), PSA 9
   // (typical — the middle, most-common outcome), PSA 10 (ceiling — best case). Same raw cost,
@@ -680,9 +785,11 @@ function compute(r) {
     tsEnt(r.raw) * 0.20
   ) * 10) / 10;
 
-  // Column display follows the selected crack basis (must precede signal logic)
-  const dispCrack = CRACK_BASIS==='8' ? crackP8 : CRACK_BASIS==='9' ? crackP9 : bestCrack;
-  const dispFrom  = CRACK_BASIS==='8' ? '8' : CRACK_BASIS==='9' ? '9' : crackFrom;
+  // Column display follows the selected crack basis (must precede signal logic).
+  // dispCrack can be null when CRACK_BASIS is '7' and this specific card has no live
+  // PSA 7 price yet — treated as "not a crack candidate" below, same as any other null.
+  const dispCrack = CRACK_BASIS==='9' ? crackP9 : CRACK_BASIS==='7' ? crackP7 : crackP8;
+  const dispFrom  = CRACK_BASIS==='9' ? '9' : CRACK_BASIS==='7' ? '7' : '8';
 
   // Signal chain (fixed). The old chain gated "Grade Raw" on gradeProfit > 0 using the PSA 10
   // ceiling — which is positive for essentially every card in the catalog (every era estimate
@@ -698,7 +805,7 @@ function compute(r) {
   else if (tomeScore >= 75) signal = 'Strong Score';
   else if (tomeScore >= 55) signal = 'Watch';
 
-  return {...r, crackP8, crackP9, bestCrack, crackFrom, dispCrack, dispFrom,
+  return {...r, crackP7, crackP8, crackP9, dispCrack, dispFrom,
           gradeProfitFloor, gradeProfitTypical, gradeProfit, gradeROI, typicalROI,
           mult:parseFloat(mult.toFixed(1)), tomeScore, signal};
 }
@@ -757,6 +864,10 @@ function sparkline(h) {
 
 const f$ = n => (n<0?'-$':'$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const fPct = n => n==null ? '—' : (n>=0?'+':'')+(n*100).toFixed(0)+'%';
+// Grade-price cell: real JustTCG price when `live` is true, a "~"-prefixed fallback
+// estimate when not (era-calibrated multiplier — see EST), or "—" when there's no
+// value at all (only possible for p7, which has no fallback estimate to fall back to).
+const gCell = (n, live) => n==null ? '—' : (live ? f$(n) : '~'+f$(n));
 const momCls = n => n==null ? 'fl' : n>.05?'up':n<-.05?'dn':'fl';
 const pCls = n => n>0?'pos':'neg';
 const tsCls = s => s>=75?'ts-e':s>=55?'ts-s':s>=35?'ts-w':'ts-x';
@@ -813,7 +924,7 @@ function render() {
 
   const tbody = document.getElementById('tbody');
   if (!allRows.length) {
-    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px">No cards match your filters. Try lowering the minimum price or clearing filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="21" style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px">No cards match your filters. Try lowering the minimum price or clearing filters.</td></tr>';
     updatePagebar(0, totalPages);
     return;
   }
@@ -835,8 +946,9 @@ function render() {
       <td><span class="ts-pill ${tsCls(c.tomeScore)}">${c.tomeScore.toFixed(1)}</span></td>
       <td><span class="sig ${s.c}">${s.i} ${c.signal}</span></td>
       <td class="mono">${f$(c.raw)}</td>
-      <td class="mono">${c.p8==null?'—':f$(c.p8)}</td>
-      <td class="mono">${c.p9==null?'—':f$(c.p9)}</td>
+      <td class="mono">${gCell(c.p7, c.p7Live)}</td>
+      <td class="mono">${gCell(c.p8, c.p8Live)}</td>
+      <td class="mono">${gCell(c.p9, c.p9Live)}</td>
       <td class="mono">${c.p10==null?'—':f$(c.p10)}</td>
       <td>${c.dispCrack==null?'—':`<div class="pc"><span class="pa ${pCls(c.dispCrack)}">${f$(c.dispCrack)}</span><span class="pl">vs PSA ${c.dispFrom} slab</span></div>`}</td>
       <td>${c.gradeProfitFloor==null?'—':`<div class="pc"><span class="pa ${pCls(c.gradeProfitTypical)}">${f$(c.gradeProfitFloor)} to ${f$(c.gradeProfit)}</span><span class="pl">PSA 8→10 · typical ${f$(c.gradeProfitTypical)}</span></div>`}</td>
@@ -921,10 +1033,12 @@ segHandler('eraSeg',  v=>eraF=v);
 
 // Min/max price are free-text fields, not a fixed set of buttons — someone with a $100
 // budget shouldn't have to wade through 1,000+ pricier cards just because $100 wasn't one
-// of the four preset stops. Blank max = no ceiling; blank/invalid min falls back to $0.
+// of the four preset stops. Blank max = no ceiling. Blank/invalid min falls back to $25 —
+// not $0 — since that's the field's own placeholder default and today's catalog has no
+// cards below it anyway; typing a number only ever raises the floor from there.
 document.getElementById('minPriceInput').addEventListener('input', e=>{
   const v = parseFloat(e.target.value);
-  minPrice = (e.target.value === '' || isNaN(v) || v < 0) ? 0 : v;
+  minPrice = (e.target.value === '' || isNaN(v) || v < 0) ? 25 : v;
   currentPage = 1;
   render();
 });
@@ -944,7 +1058,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   document.getElementById('search').value='';
   document.getElementById('setFilter').value='';
   document.getElementById('sigFilter').value='';
-  document.getElementById('minPriceInput').value='25';
+  document.getElementById('minPriceInput').value='';
   document.getElementById('maxPriceInput').value='';
   ['gameSeg','eraSeg'].forEach(id=>document.querySelectorAll(`#${id} .sb`).forEach((b,i)=>b.classList.toggle('active',i===0)));
   currentPage = 1;
@@ -1048,14 +1162,16 @@ async function openDrawer(id) {
     <div id="drawerChart">${bigChart(c.h7, '7-Day Trend')}</div>
     ${rangeBand(c)}
     ${c.p10!=null?`
-    <div style="margin:16px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Graded (est. until live)</div>
+    <div style="margin:16px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Graded (PSA 7/8/9 live where available, ~ = estimate · PSA 10 est.)</div>
     <div style="display:flex;gap:8px;font-family:var(--mono);font-size:12px;">
-      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 8</div>${f$(c.p8)}</div>
-      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 9</div>${f$(c.p9)}</div>
+      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 7</div>${gCell(c.p7, c.p7Live)}</div>
+      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 8</div>${gCell(c.p8, c.p8Live)}</div>
+      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 9</div>${gCell(c.p9, c.p9Live)}</div>
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 10</div>${f$(c.p10)}</div>
     </div>
     <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Crack &amp; Flip</div>
     <div style="display:flex;gap:8px;font-size:12px;">
+      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 7</div><span class="mono ${c.crackP7==null?'fl':pCls(c.crackP7)}">${c.crackP7==null?'—':f$(c.crackP7)}</span></div>
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 8</div><span class="mono ${pCls(c.crackP8)}">${f$(c.crackP8)}</span></div>
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 9</div><span class="mono ${pCls(c.crackP9)}">${f$(c.crackP9)}</span></div>
     </div>
@@ -1162,7 +1278,7 @@ document.querySelectorAll('.info-ic').forEach(ic => {
 document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
 document.getElementById('tbody').innerHTML =
-  '<tr><td colspan="20" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+  '<tr><td colspan="21" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
   '<div style="width:26px;height:26px;border:2.5px solid var(--border-str);border-top-color:var(--green);border-radius:50%;animation:tspin 0.7s linear infinite;margin:0 auto 0.75rem"></div>' +
   'Loading live pricing from JustTCG…</td></tr>' +
   '<style>@keyframes tspin{to{transform:rotate(360deg)}}</style>';
@@ -1172,7 +1288,7 @@ document.getElementById('tbody').innerHTML =
     const { cards, errors } = await loadLiveData();
     if (!cards.length) {
       document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="20" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+        '<tr><td colspan="21" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
         'Could not load card data.' + (errors.length ? '<br><span style="font-size:11px">' + errors.join(' · ') + '</span>' : '') +
         '<br><span style="font-size:11px">Check the worker URL and try refreshing.</span></td></tr>';
       return;
@@ -1192,9 +1308,42 @@ document.getElementById('tbody').innerHTML =
       note.textContent = 'Partial data load — some games failed to fetch: ' + errors.join(' · ');
       document.querySelector('.pg-hd').after(note);
     }
+
+    // ── Background enrichment: real PSA 7/8/9 prices ──────────────────────────
+    // Estimates are already on screen (instant render above). This runs after,
+    // one JustTCG call per card with bounded concurrency, and upgrades cells to
+    // real data as it streams in — never blocks the initial view, never breaks
+    // it if it fails entirely (page just stays estimate-only, same as today).
+    const gradeNote = document.createElement('div');
+    gradeNote.style.cssText = 'font-size:11px;color:var(--text-3);padding:6px 10px;background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--accent,var(--green));border-radius:6px;margin:8px 0;';
+    gradeNote.textContent = 'Fetching real PSA 7/8/9 prices from JustTCG… 0/' + CARDS.length;
+    document.querySelector('.pg-hd').after(gradeNote);
+
+    let lastRenderAt = 0;
+    enrichWithRealGradedPrices(CARDS, (done, total, liveCards) => {
+      gradeNote.textContent = 'Fetching real PSA 7/8/9 prices from JustTCG… ' + done + '/' + total +
+        ' (' + liveCards + ' card' + (liveCards === 1 ? '' : 's') + ' with live data so far)';
+      // Re-render periodically as data streams in, not on every single card —
+      // recomputing/re-rendering ~1,400 times would be wasteful and janky.
+      if (done === total || done - lastRenderAt >= 25) {
+        lastRenderAt = done;
+        DATA = CARDS.map(compute);
+        render();
+      }
+    }).then((liveCards) => {
+      gradeNote.textContent = liveCards > 0
+        ? 'Real PSA 7/8/9 data loaded for ' + liveCards + ' of ' + CARDS.length + ' cards. Cards without a JustTCG graded listing keep their era-calibrated estimate.'
+        : 'Could not fetch real PSA 7/8/9 data — showing era-calibrated estimates for all cards.';
+      DATA = CARDS.map(compute);
+      render();
+      setTimeout(() => { gradeNote.style.opacity = '0'; gradeNote.style.transition = 'opacity 1s'; setTimeout(() => gradeNote.remove(), 1200); }, 6000);
+    }).catch((err) => {
+      console.warn('Graded-price enrichment failed:', err);
+      gradeNote.textContent = 'Could not fetch real PSA 7/8/9 data — showing era-calibrated estimates for all cards.';
+    });
   } catch (err) {
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="20" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
+      '<tr><td colspan="21" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
       'Failed to load data: ' + err.message + '</td></tr>';
   }
 })();
