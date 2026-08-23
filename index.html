@@ -312,11 +312,13 @@ td{padding:9px 10px;vertical-align:middle;}
 
   <!-- Profit controls -->
   <div class="pbar">
-    <span class="plbl">PSA fee:</span>
+    <span class="plbl">PSA fee:<span class="info-ic" data-tip="Auto matches each card to the cheapest real PSA tier its value qualifies for (PSA requires the submission tier to cover the card's declared value) — a $50 card and a $5,000 card pay different real fees. The manual buttons instead force one fixed fee across every card." onclick="event.stopPropagation()">ⓘ</span></span>
     <div class="seg" id="feeBtns">
-      <button class="fee-btn active" data-fee="25">Value $25</button>
-      <button class="fee-btn" data-fee="75">Regular $75</button>
+      <button class="fee-btn active" data-fee="auto">Auto</button>
+      <button class="fee-btn" data-fee="80">Regular $80</button>
       <button class="fee-btn" data-fee="150">Express $150</button>
+      <button class="fee-btn" data-fee="350">Super Express $350</button>
+      <button class="fee-btn" data-fee="600">Walk-Through $600</button>
     </div>
     <span style="width:1px;height:18px;background:var(--border-md);"></span>
     <span class="plbl">Net sale rate:</span>
@@ -408,7 +410,41 @@ td{padding:9px 10px;vertical-align:middle;}
 <script>
 // ═══ CONFIG ════════════════════════════════════════════════════════════════════
 let SALE_RATE = 0.80;
-let PSA_FEE = 25;
+
+// PSA's real single-card grading tiers (sourced from psacard.com, Aug 2026 — PSA revises
+// pricing periodically, so re-verify these if they start looking stale). Each tier has a
+// fee AND a max declared-value cap: PSA requires the submission tier to match the card's
+// value for insurance purposes, so a $5,000 card genuinely cannot go in at the cheapest
+// tier. The old flat "Value $25" tier this replaced is PSA's single-card Value service,
+// which is paused as of this writing — the only sub-$80 path today is a 50-card-minimum
+// bulk submission, not realistic for grading one card at a time, so it's excluded here.
+const FEE_TIERS = [
+  { name: 'Regular',       fee: 80,    cap: 1500 },
+  { name: 'Express',       fee: 150,   cap: 2500 },
+  { name: 'Super Express', fee: 350,   cap: 5000 },
+  { name: 'Walk-Through',  fee: 600,   cap: 10000 },
+  { name: 'Premium 1',     fee: 1000,  cap: 25000 },
+  { name: 'Premium 2',     fee: 2000,  cap: 50000 },
+  { name: 'Premium 3',     fee: 3000,  cap: 100000 },
+  { name: 'Premium 5',     fee: 5000,  cap: 250000 },
+  { name: 'Premium 10',    fee: 10000, cap: Infinity },
+];
+// Cheapest tier whose declared-value cap covers `v` — falls through to the top tier for
+// anything above even Premium 5's cap. Declared value should reflect what you'd actually
+// insure the submission for; see feeForCard below for which of a card's prices that means.
+function feeForValue(v) {
+  return FEE_TIERS.find(t => v <= t.cap) || FEE_TIERS[FEE_TIERS.length - 1];
+}
+// The value PSA needs declared is the submission's insured worth — practically, that's
+// what the card could be worth once graded, not its raw price today, since that's the
+// exposure you're covering. Using the PSA 10 ceiling is the conservative (safe) choice:
+// under-declaring risks a denied claim, over-declaring just costs a bit more.
+function feeForCard(c) {
+  return feeForValue(c.p10 ?? c.raw);
+}
+
+let PSA_FEE_MODE = 'auto';   // 'auto' = feeForCard() per row; otherwise a fixed fee number
+                              // applied to every row via the manual override buttons.
 let CRACK_BASIS = '8';   // '9' | '8' | '7' — which PSA slab the Crack Profit column benchmarks
 // Cracking a slab returns a raw card, and once it's out of the holder it sells on the raw
 // market like any other raw card — buyers of raw singles aren't grading it. So a cracked
@@ -748,9 +784,15 @@ function compute(r) {
   // come back a 10 — showing only the PSA 10 number (the old, single "Grade Profit" figure)
   // overstated every card's realistic upside. Signal-gating and the Tome Score value factor
   // below use the PSA 9 "typical" figure, not the PSA 10 ceiling.
-  const gradeProfitFloor   = parseFloat(((r.p8  * SALE_RATE) - r.raw - PSA_FEE).toFixed(2));
-  const gradeProfitTypical = parseFloat(((r.p9  * SALE_RATE) - r.raw - PSA_FEE).toFixed(2));
-  const gradeProfit        = parseFloat(((r.p10 * SALE_RATE) - r.raw - PSA_FEE).toFixed(2)); // ceiling / best case (PSA 10)
+  // Fee is per-card in 'auto' mode (each card pays whatever real PSA tier its declared
+  // value requires — see feeForCard above) or a single fixed override when a manual tier
+  // button is active. appliedFeeTier is kept on the row so the UI can show which tier
+  // actually applied, not just the resulting dollar figure.
+  const appliedFeeTier = PSA_FEE_MODE === 'auto' ? feeForCard(r) : null;
+  const feeUsed = appliedFeeTier ? appliedFeeTier.fee : PSA_FEE_MODE;
+  const gradeProfitFloor   = parseFloat(((r.p8  * SALE_RATE) - r.raw - feeUsed).toFixed(2));
+  const gradeProfitTypical = parseFloat(((r.p9  * SALE_RATE) - r.raw - feeUsed).toFixed(2));
+  const gradeProfit        = parseFloat(((r.p10 * SALE_RATE) - r.raw - feeUsed).toFixed(2)); // ceiling / best case (PSA 10)
   const gradeROI     = r.raw > 0 ? parseFloat((gradeProfit / r.raw * 100).toFixed(1))        : null; // "Max Grade ROI" — PSA 10 ceiling
   const typicalROI   = r.raw > 0 ? parseFloat((gradeProfitTypical / r.raw * 100).toFixed(1)) : null;
   const mult = r.p10 / r.raw;
@@ -807,6 +849,7 @@ function compute(r) {
 
   return {...r, crackP7, crackP8, crackP9, dispCrack, dispFrom,
           gradeProfitFloor, gradeProfitTypical, gradeProfit, gradeROI, typicalROI,
+          feeUsed, feeTierName: appliedFeeTier ? appliedFeeTier.name : null,
           mult:parseFloat(mult.toFixed(1)), tomeScore, signal};
 }
 
@@ -830,6 +873,48 @@ const PRESETS = {
   grades: {col:'gradeROI',    dir:-1, sig:''},
   movers: {col:'mom',         dir:-1, sig:''},
 };
+
+// Rebuilds the "Set" dropdown to only offer sets that actually exist within the
+// currently-active Game/Era filters, so picking "Pokémon" doesn't leave 200+ Lorcana
+// and One Piece sets cluttering the list. When no single game is selected, sets are
+// grouped under a per-game <optgroup> label so "Aquapolis" vs. "Fabled" vs. "Emperors
+// in the New World" is unambiguous at a glance instead of one flat undifferentiated list.
+function rebuildSetFilter() {
+  const sel = document.getElementById('setFilter');
+  const prevValue = setF;
+  const inScope = CARDS.filter(c => (!gameF || c.game === gameF) && (!eraF || c.era === eraF));
+
+  sel.innerHTML = '<option value="">All Sets</option>';
+
+  if (gameF) {
+    // Single game already selected — a flat list is unambiguous on its own.
+    [...new Set(inScope.map(c => c.set))].sort().forEach(s => {
+      const o = document.createElement('option'); o.value = s; o.textContent = s;
+      sel.appendChild(o);
+    });
+  } else {
+    // Multiple games in scope — group by game so identical-looking set names
+    // (or just a long undifferentiated list) don't get confusing.
+    const byGame = {};
+    inScope.forEach(c => { (byGame[c.game] ||= new Set()).add(c.set); });
+    Object.keys(byGame).sort().forEach(g => {
+      const grp = document.createElement('optgroup');
+      grp.label = `${GAME_EMOJI[g] || ''} ${g}`.trim();
+      [...byGame[g]].sort().forEach(s => {
+        const o = document.createElement('option'); o.value = s; o.textContent = s;
+        grp.appendChild(o);
+      });
+      sel.appendChild(grp);
+    });
+  }
+
+  // A set that's no longer valid under the new Game/Era scope (e.g. switching from
+  // "All Games" to "Pokémon" while a Lorcana set was selected) gets cleared rather
+  // than silently left selected-but-invisible.
+  const stillValid = [...sel.options].some(o => o.value === prevValue);
+  sel.value = stillValid ? prevValue : '';
+  setF = sel.value;
+}
 
 // ═══ FILTER / SORT ═════════════════════════════════════════════════════════════
 function getFiltered() {
@@ -1017,19 +1102,22 @@ document.querySelectorAll('.chip').forEach(chip => {
   });
 });
 
-function segHandler(segId, setter) {
+function segHandler(segId, setter, onAfter) {
   document.querySelectorAll(`#${segId} .sb`).forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll(`#${segId} .sb`).forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
       setter(b.dataset.v);
+      if (onAfter) onAfter();
       currentPage = 1;
       render();
     });
   });
 }
-segHandler('gameSeg', v=>gameF=v);
-segHandler('eraSeg',  v=>eraF=v);
+// Game/Era changes narrow which sets are even possible, so the Set dropdown is
+// rebuilt every time either one changes (see rebuildSetFilter above).
+segHandler('gameSeg', v=>gameF=v, rebuildSetFilter);
+segHandler('eraSeg',  v=>eraF=v, rebuildSetFilter);
 
 // Min/max price are free-text fields, not a fixed set of buttons — someone with a $100
 // budget shouldn't have to wade through 1,000+ pricier cards just because $100 wasn't one
@@ -1061,6 +1149,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   document.getElementById('minPriceInput').value='';
   document.getElementById('maxPriceInput').value='';
   ['gameSeg','eraSeg'].forEach(id=>document.querySelectorAll(`#${id} .sb`).forEach((b,i)=>b.classList.toggle('active',i===0)));
+  rebuildSetFilter();
   currentPage = 1;
   render();
 });
@@ -1069,7 +1158,7 @@ document.querySelectorAll('#feeBtns .fee-btn').forEach(b => {
   b.addEventListener('click', () => {
     document.querySelectorAll('#feeBtns .fee-btn').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
-    PSA_FEE = parseInt(b.dataset.fee);
+    PSA_FEE_MODE = b.dataset.fee === 'auto' ? 'auto' : parseInt(b.dataset.fee);
     DATA = CARDS.map(compute);
     currentPage = 1;
     render();
@@ -1142,9 +1231,16 @@ async function openDrawer(id) {
   const d = document.getElementById('drawer');
   const o = document.getElementById('drawerOverlay');
   const starred = WATCHLIST.has(c.id);
-  const feeRows = [25,75,150].map(f => {
-    const gp = c.p10==null?null:parseFloat(((c.p10*SALE_RATE)-c.raw-f).toFixed(2));
-    return `<tr><td style="padding:4px 8px;font-size:11px;color:var(--text-2)">$${f} fee</td><td style="padding:4px 8px;font-family:var(--mono);font-size:11px;text-align:right" class="${gp>0?'up':'dn'}">${gp==null?'—':f$(gp)}</td></tr>`;
+  // Standard four tiers, plus — if this card's own value pushes it into a Premium tier —
+  // that specific tier too, so a $20k chase card isn't stuck comparing against tiers it
+  // couldn't actually be submitted under.
+  const cardTier = feeForCard(c);
+  const tiersToShow = FEE_TIERS.slice(0, 4);
+  if (!tiersToShow.includes(cardTier)) tiersToShow.push(cardTier);
+  const feeRows = tiersToShow.map(t => {
+    const gp = c.p10==null?null:parseFloat(((c.p10*SALE_RATE)-c.raw-t.fee).toFixed(2));
+    const isApplied = PSA_FEE_MODE === 'auto' && t === cardTier;
+    return `<tr style="${isApplied?'background:rgba(212,175,55,0.12)':''}"><td style="padding:4px 8px;font-size:11px;color:var(--text-2)">${t.name} $${t.fee}${isApplied?' <span style="color:var(--green)">(auto)</span>':''}</td><td style="padding:4px 8px;font-family:var(--mono);font-size:11px;text-align:right" class="${gp>0?'up':'dn'}">${gp==null?'—':f$(gp)}</td></tr>`;
   }).join('');
   d.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
@@ -1295,10 +1391,7 @@ document.getElementById('tbody').innerHTML =
     }
     CARDS = cards;
     DATA = CARDS.map(compute);
-    [...new Set(CARDS.map(c=>c.set))].sort().forEach(s=>{
-      const o=document.createElement('option');o.value=s;o.textContent=s;
-      document.getElementById('setFilter').appendChild(o);
-    });
+    rebuildSetFilter();
     markSortedHeader();
     render();
     if (errors.length) {
