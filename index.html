@@ -358,7 +358,7 @@ td{padding:9px 10px;vertical-align:middle;}
         <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="info-ic" data-tip="Tome Score (0–100) ranks how attractive a card looks for near-term action — not long-term price appreciation. It weighs three things: realistic (PSA 9-typical) grading upside, 30-day price momentum, and entry price — higher scores mean stronger short-term candidates. Long-term hold/appreciation scoring isn't supported yet (it needs population, rarity, and multi-year trend data we don't have) — that's a planned future enhancement. The exact weighting is proprietary and keeps evolving as our data improves." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↓</span></th>
         <th data-col="signal" style="width:112px">Signal<span class="info-ic" data-tip="Crack & Flip: cracking a slab and reselling raw beats buying raw and grading it. Grade Raw: PSA 9-typical grading ROI clears a 35% minimum. Strong Score / Watch: doesn't clear a grading signal outright, but scores 75+ / 55+ on Tome Score. Skip: none of the above." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="raw" style="width:64px">Raw NM<span class="arr">↕</span></th>
-        <th data-col="p7" style="width:58px">PSA 7<span class="info-ic" data-tip="Real PSA 7 market price from JustTCG when available. Blank (—) means JustTCG has no PSA 7 listing for this card yet — there's no fallback estimate for this grade." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
+        <th data-col="p7" style="width:58px">PSA 7<span class="info-ic" data-tip="Real PSA 7 market price from JustTCG when available. A '~' prefix means JustTCG has no PSA 7 listing for this card yet, so this falls back to an era-calibrated estimate — one anchored near raw price rather than derived from observed PSA 7 sales, since we don't have any to calibrate against." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="p8" style="width:64px">PSA 8<span class="info-ic" data-tip="Real PSA 8 market price from JustTCG when available. A '~' prefix means JustTCG has no PSA 8 listing for this card yet, so this falls back to an era-calibrated estimate instead." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="p9" style="width:64px">PSA 9<span class="info-ic" data-tip="Real PSA 9 market price from JustTCG when available. A '~' prefix means JustTCG has no PSA 9 listing for this card yet, so this falls back to an era-calibrated estimate instead." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="p10" style="width:62px">PSA 10 est.<span class="arr">↕</span></th>
@@ -507,13 +507,24 @@ function classifyEra(game, setId) {
 
 // ── Graded-value estimation (BETA) ──────────────────────────────────────────────
 // PSA 7/8/9 are now backed by real per-card JustTCG graded prices (see
-// enrichWithRealGradedPrices below) whenever JustTCG has a graded listing for that
-// card. These era-calibrated multipliers are the FALLBACK for p8/p9 only, used when
+// applyGradedPriceSnapshot below) whenever JustTCG has a graded listing for that
+// card. These era-calibrated multipliers are the FALLBACK for p7/p8/p9, used when
 // live data is missing for a specific card — and the ONLY source for p10, which isn't
 // fetched live (out of scope for now; every card's PSA 10 stays a model estimate).
+//
+// p7 specifically: unlike p8/p9 (calibrated against observable PSA10/raw relationships),
+// there's no real p7 data this model was built from — it's anchored just above raw price
+// (vintage 1.10x, modern 0.95x) rather than extrapolated further down the p9->p8 ratio,
+// which would push it below 1.0x raw. That extrapolation isn't obviously wrong — a
+// mediocre-grade slab of a common, high-population modern card can genuinely sell at or
+// below raw NM, since the slab locks in a so-so grade forever while a raw card keeps the
+// optionality of grading higher — but it's a stronger, more surprising claim to put in
+// front of readers than "PSA 7 sits close to raw," so this stays intentionally
+// conservative. Like p8/p9, this is a MODEL, not observed data — surfaced with the same
+// "~" prefix (see gCell below) so it's never presented as more certain than it is.
 const EST = {
-  vintage: { p10: 7.0, p9: 2.1, p8: 1.25 },
-  modern:  { p10: 5.5, p9: 1.7, p8: 1.05 },
+  vintage: { p10: 7.0, p9: 2.1, p8: 1.25, p7: 1.10 },
+  modern:  { p10: 5.5, p9: 1.7, p8: 1.05, p7: 0.95 },
 };
 function estimateGraded(raw, era) {
   const m = EST[era] || EST.modern;
@@ -521,6 +532,7 @@ function estimateGraded(raw, era) {
     p10: parseFloat((raw * m.p10).toFixed(2)),
     p9:  parseFloat((raw * m.p9).toFixed(2)),
     p8:  parseFloat((raw * m.p8).toFixed(2)),
+    p7:  parseFloat((raw * m.p7).toFixed(2)),
   };
 }
 
@@ -557,11 +569,10 @@ function mapCard(apiCard, game) {
     set: setName,
     num: apiCard.number && apiCard.number !== 'N/A' ? apiCard.number : '—',
     raw,
-    // p7 has no estimate fallback (EST never had a p7 multiplier) — null until/unless
-    // enrichWithRealGradedPrices finds a live JustTCG PSA 7 listing for this card.
-    // p8/p9 start on the era-calibrated estimate and get overwritten with real prices
-    // (and pXLive flipped true) during that same enrichment pass, when available.
-    p7: null, p8: est.p8, p9: est.p9, p10: est.p10,
+    // p7/p8/p9 all start on the era-calibrated estimate and get overwritten with real
+    // prices (and pXLive flipped true) if applyGradedPriceSnapshot finds a live JustTCG
+    // listing for this card. p10 has no live source at all — always the model estimate.
+    p7: est.p7, p8: est.p8, p9: est.p9, p10: est.p10,
     p7Live: false, p8Live: false, p9Live: false,
     gem: null,
     // JustTCG returns priceChange30d as a percentage; normalize to decimal. Kept as `null`
@@ -648,90 +659,37 @@ async function loadLiveData() {
 }
 
 // ═══ GRADED-DATA ENRICHMENT (real PSA 7/8/9 prices) ═════════════════════════════
-// Runs AFTER the raw catalog loads and renders, in the background, one JustTCG API
-// call per card — the v2 graded endpoint is a single-card lookup, there's no bulk/
-// batch option live yet (see the worker's /v2/cards passthrough). Bounded
-// concurrency keeps this polite to both the worker's edge cache and JustTCG's own
-// rate limits. A card whose lookup fails or comes back empty just keeps its era-
-// calibrated estimate (see EST above) — this never blocks or breaks the initial
-// render, and a full enrichment failure degrades to exactly today's estimate-only
-// behavior.
-const GRADE_FETCH_CONCURRENCY = 8;
-
-// VERIFIED against a live response (2026-08-23). Envelope is {data:[card]} — a single-
-// element array, since one card_id was asked for — with the card's `variants` array
-// holding both raw and graded entries. Confirmed price lives at markets[].price, and
-// the market's region key is "US" (not "NA" as first guessed — kept as a fallback below
-// in case that varies by card). This filter — company === 'PSA' && grade in {7,8,9} — is
-// applied here, client-side, deliberately: see fetchGradedPSA below for why.
-function parseGradedResponse(json) {
-  if (!json) return null;
-  const card = Array.isArray(json.data) ? json.data[0] : (json.data || json);
-  if (!card || !Array.isArray(card.variants)) return null;
-  const out = {};
-  for (const v of card.variants) {
-    if (v.type !== 'graded' || v.grading?.company !== 'PSA') continue;
-    const grade = v.grading?.grade;
-    const price = v.markets?.find(m => m.region === 'US')?.price ?? v.markets?.[0]?.price;
-    if (price == null) continue;
-    if (grade === 7) out.p7 = parseFloat(price);
-    else if (grade === 8) out.p8 = parseFloat(price);
-    else if (grade === 9) out.p9 = parseFloat(price);
-  }
-  return Object.keys(out).length ? out : null;
-}
-
-async function fetchGradedPSA(cardId) {
+// A daily Cloudflare cron job (see the worker) does the actual ~1,400-card JustTCG
+// lookup once a day, off the request path, and stores the results in KV. This just
+// reads that one pre-computed snapshot — a single request, not one per card. Earlier
+// this ran live on every page load (a bounded-concurrency per-card loop); that meant
+// every visitor triggered ~1,000+ real JustTCG calls apiece, since only successful
+// lookups were edge-cached — the ~75-80% of cards with no graded data (a 404) were
+// hitting JustTCG fresh on every single visit. Moved server-side to fix that.
+// Mutates each card in place with whatever real PSA 7/8/9 prices the snapshot has;
+// cards missing from the snapshot (not yet checked, or genuinely no data) just keep
+// their era-calibrated estimate. Returns the snapshot's metadata (or null if there
+// isn't one yet — e.g. the very first day before the cron has ever run) so the
+// caller can show an honest status line either way.
+async function applyGradedPriceSnapshot(cards) {
   try {
-    // Deliberately NOT passing grading_company/grade filters, even though JustTCG's
-    // docs describe them as supported. Verified live: grading_company is silently
-    // ignored server-side (asking for PSA still returns whatever company IS on file),
-    // and adding a grade filter for grades the card has no data for returns null-price
-    // placeholder rows instead of omitting them — which would make every card look like
-    // "checked, no data" instead of "not asked". Requesting `graded=only` with no further
-    // filter returns only the graded variants that actually have data, of whatever
-    // company/grade JustTCG has on file; parseGradedResponse then keeps just PSA 7/8/9.
-    // Same cost either way (graded=only is 1 call regardless of filters).
-    const res = await fetch(
-      `${WORKER_URL}/v2/cards?card_id=${encodeURIComponent(cardId)}&graded=only`
-    );
-    if (!res.ok) return null;
-    return parseGradedResponse(await res.json());
-  } catch (e) {
-    return null;   // network hiccup on one card isn't worth surfacing — estimate stands in
-  }
-}
-
-// Simple bounded-concurrency runner — no external deps, just enough to avoid firing
-// ~1,400 requests at once.
-async function mapWithConcurrency(items, limit, fn) {
-  let next = 0;
-  async function worker() {
-    while (next < items.length) {
-      const i = next++;
-      await fn(items[i], i);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-}
-
-// Mutates each card in place with real PSA 7/8/9 prices where JustTCG has them.
-// onProgress(done, total, liveCards) fires after every card so the caller can update
-// a status line and periodically re-render as real data streams in.
-async function enrichWithRealGradedPrices(cards, onProgress) {
-  let done = 0, liveCards = 0;
-  await mapWithConcurrency(cards, GRADE_FETCH_CONCURRENCY, async (c) => {
-    const g = await fetchGradedPSA(c.id);
-    done++;
-    if (g) {
-      liveCards++;
+    const res = await fetch(`${WORKER_URL}/graded-prices`);
+    if (!res.ok) return null;   // 503 = no snapshot yet; page just stays estimate-only
+    const snap = await res.json();
+    const byId = cards.reduce((m, c) => (m[c.id] = c, m), {});
+    let appliedCount = 0;
+    for (const [id, g] of Object.entries(snap.data || {})) {
+      const c = byId[id];
+      if (!c) continue;   // snapshot may reference a card no longer in today's catalog
+      appliedCount++;
       if (g.p7 != null) { c.p7 = g.p7; c.p7Live = true; }
       if (g.p8 != null) { c.p8 = g.p8; c.p8Live = true; }
       if (g.p9 != null) { c.p9 = g.p9; c.p9Live = true; }
     }
-    if (onProgress) onProgress(done, cards.length, liveCards);
-  });
-  return liveCards;
+    return { updatedAt: snap.updatedAt, cardsChecked: snap.cardsChecked, liveCount: appliedCount };
+  } catch (e) {
+    return null;   // network hiccup — estimate-only, same as a missing snapshot
+  }
 }
 
 // ═══ SCORING ═══════════════════════════════════════════════════════════════════
@@ -774,9 +732,9 @@ function compute(r) {
   const cv = r.raw * SALE_RATE;
   const crackP9 = parseFloat((cv - r.p9).toFixed(2));
   const crackP8 = parseFloat((cv - r.p8).toFixed(2));
-  // p7 has no fallback estimate — only ever set from a real JustTCG lookup — so unlike
-  // crackP8/crackP9 this can genuinely be null for a card enrichment hasn't reached yet.
-  const crackP7 = r.p7 != null ? parseFloat((cv - r.p7).toFixed(2)) : null;
+  // p7 now always has a value (real or era-calibrated estimate — see EST above), same as
+  // p8/p9, so this needs no separate null-handling anymore.
+  const crackP7 = parseFloat((cv - r.p7).toFixed(2));
 
   // Grade profit at three outcomes, not one: PSA 8 (floor — worst realistic grade), PSA 9
   // (typical — the middle, most-common outcome), PSA 10 (ceiling — best case). Same raw cost,
@@ -828,8 +786,8 @@ function compute(r) {
   ) * 10) / 10;
 
   // Column display follows the selected crack basis (must precede signal logic).
-  // dispCrack can be null when CRACK_BASIS is '7' and this specific card has no live
-  // PSA 7 price yet — treated as "not a crack candidate" below, same as any other null.
+  // crackP7/P8/P9 all always have a value now (real or estimate), so dispCrack is never
+  // null on account of missing p7 data specifically anymore.
   const dispCrack = CRACK_BASIS==='9' ? crackP9 : CRACK_BASIS==='7' ? crackP7 : crackP8;
   const dispFrom  = CRACK_BASIS==='9' ? '9' : CRACK_BASIS==='7' ? '7' : '8';
 
@@ -950,8 +908,8 @@ function sparkline(h) {
 const f$ = n => (n<0?'-$':'$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 const fPct = n => n==null ? '—' : (n>=0?'+':'')+(n*100).toFixed(0)+'%';
 // Grade-price cell: real JustTCG price when `live` is true, a "~"-prefixed fallback
-// estimate when not (era-calibrated multiplier — see EST), or "—" when there's no
-// value at all (only possible for p7, which has no fallback estimate to fall back to).
+// estimate when not (era-calibrated multiplier — see EST). p7/p8/p9 always have one or
+// the other now; the null case is kept only as a defensive fallback, not an expected path.
 const gCell = (n, live) => n==null ? '—' : (live ? f$(n) : '~'+f$(n));
 const momCls = n => n==null ? 'fl' : n>.05?'up':n<-.05?'dn':'fl';
 const pCls = n => n>0?'pos':'neg';
@@ -1267,7 +1225,7 @@ async function openDrawer(id) {
     </div>
     <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Crack &amp; Flip</div>
     <div style="display:flex;gap:8px;font-size:12px;">
-      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 7</div><span class="mono ${c.crackP7==null?'fl':pCls(c.crackP7)}">${c.crackP7==null?'—':f$(c.crackP7)}</span></div>
+      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 7</div><span class="mono ${pCls(c.crackP7)}">${f$(c.crackP7)}</span></div>
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 8</div><span class="mono ${pCls(c.crackP8)}">${f$(c.crackP8)}</span></div>
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 9</div><span class="mono ${pCls(c.crackP9)}">${f$(c.crackP9)}</span></div>
     </div>
@@ -1402,37 +1360,26 @@ document.getElementById('tbody').innerHTML =
       document.querySelector('.pg-hd').after(note);
     }
 
-    // ── Background enrichment: real PSA 7/8/9 prices ──────────────────────────
-    // Estimates are already on screen (instant render above). This runs after,
-    // one JustTCG call per card with bounded concurrency, and upgrades cells to
-    // real data as it streams in — never blocks the initial view, never breaks
-    // it if it fails entirely (page just stays estimate-only, same as today).
-    const gradeNote = document.createElement('div');
-    gradeNote.style.cssText = 'font-size:11px;color:var(--text-3);padding:6px 10px;background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--accent,var(--green));border-radius:6px;margin:8px 0;';
-    gradeNote.textContent = 'Fetching real PSA 7/8/9 prices from JustTCG… 0/' + CARDS.length;
-    document.querySelector('.pg-hd').after(gradeNote);
-
-    let lastRenderAt = 0;
-    enrichWithRealGradedPrices(CARDS, (done, total, liveCards) => {
-      gradeNote.textContent = 'Fetching real PSA 7/8/9 prices from JustTCG… ' + done + '/' + total +
-        ' (' + liveCards + ' card' + (liveCards === 1 ? '' : 's') + ' with live data so far)';
-      // Re-render periodically as data streams in, not on every single card —
-      // recomputing/re-rendering ~1,400 times would be wasteful and janky.
-      if (done === total || done - lastRenderAt >= 25) {
-        lastRenderAt = done;
-        DATA = CARDS.map(compute);
-        render();
-      }
-    }).then((liveCards) => {
-      gradeNote.textContent = liveCards > 0
-        ? 'Real PSA 7/8/9 data loaded for ' + liveCards + ' of ' + CARDS.length + ' cards. Cards without a JustTCG graded listing keep their era-calibrated estimate.'
-        : 'Could not fetch real PSA 7/8/9 data — showing era-calibrated estimates for all cards.';
+    // ── Real PSA 7/8/9 prices, from yesterday's daily snapshot ────────────────
+    // Estimates are already on screen (instant render above). This is one request
+    // for a pre-computed snapshot, not 1,400 live lookups — see applyGradedPriceSnapshot
+    // above for why that changed. Never blocks the initial view, never breaks it if
+    // there's no snapshot yet (page just stays estimate-only, same as before this
+    // feature existed).
+    applyGradedPriceSnapshot(CARDS).then((meta) => {
+      if (!meta) return;   // no snapshot yet (or fetch failed) — nothing to show, no note needed
       DATA = CARDS.map(compute);
       render();
-      setTimeout(() => { gradeNote.style.opacity = '0'; gradeNote.style.transition = 'opacity 1s'; setTimeout(() => gradeNote.remove(), 1200); }, 6000);
+      const gradeNote = document.createElement('div');
+      gradeNote.style.cssText = 'font-size:11px;color:var(--text-3);padding:6px 10px;background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--green);border-radius:6px;margin:8px 0;';
+      const asOf = meta.updatedAt ? new Date(meta.updatedAt).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : 'unknown time';
+      gradeNote.textContent = meta.liveCount > 0
+        ? `Real PSA 7/8/9 data as of ${asOf}: ${meta.liveCount} of ${meta.cardsChecked} cards checked have live pricing. The rest keep their era-calibrated estimate.`
+        : `Checked ${meta.cardsChecked} cards as of ${asOf} — no live PSA data found. Showing era-calibrated estimates for all cards.`;
+      document.querySelector('.pg-hd').after(gradeNote);
+      setTimeout(() => { gradeNote.style.opacity = '0'; gradeNote.style.transition = 'opacity 1s'; setTimeout(() => gradeNote.remove(), 1200); }, 8000);
     }).catch((err) => {
-      console.warn('Graded-price enrichment failed:', err);
-      gradeNote.textContent = 'Could not fetch real PSA 7/8/9 data — showing era-calibrated estimates for all cards.';
+      console.warn('Graded-price snapshot fetch failed:', err);
     });
   } catch (err) {
     document.getElementById('tbody').innerHTML =
