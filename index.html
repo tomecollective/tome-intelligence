@@ -246,9 +246,9 @@ td{padding:9px 10px;vertical-align:middle;}
 
   <div class="pg-hd">
     <div>
-      <div class="pg-eye">Tome Collective · TCG · Market Intelligence</div>
+      <div class="pg-eye">Tome Collective · TCG · Market Analysis</div>
       <div class="pg-title">Tome Vault: TCG Arbitrage</div>
-      <div class="pg-sub">Cross-game TCG pricing intelligence across Pokémon, Lorcana, and One Piece, with grading and crack-profit analysis.</div>
+      <div class="pg-sub">Cross-game TCG pricing analysis across Pokémon, Lorcana, and One Piece, with grading and crack-profitability.</div>
       <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Powered by Tome Analytics</div>
       <div style="margin-top:6px;font-size:11px;color:var(--text-3);background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--gold);border-radius:6px;padding:6px 10px;max-width:640px;">
       <strong style="color:var(--text-2)">Beta note:</strong> raw prices and 30-day momentum are live from JustTCG. PSA 7/8/9 prices are real JustTCG market data where available (a "~" prefix means JustTCG had no listing for that card and grade, so it falls back to an era-calibrated estimate instead). PSA 10 and population remain model estimates until further graded-data integration — treat grade signals as directional. Tome Score ranks near-term opportunity, not verified long-term appreciation — true hold/appreciation scoring needs population, rarity, and multi-year trend data we don't have yet, and is a planned future enhancement.
@@ -574,6 +574,11 @@ function mapCard(apiCard, game) {
     // listing for this card. p10 has no live source at all — always the model estimate.
     p7: est.p7, p8: est.p8, p9: est.p9, p10: est.p10,
     p7Live: false, p8Live: false, p9Live: false,
+    // Kept alongside the live-overwritable p7/p8/p9 above so applyGradedPriceSnapshot can
+    // fall back to these (internally consistent by construction — see EST) if the live
+    // JustTCG data it applies turns out to be non-monotonic (see gradeAnomaly there).
+    estP7: est.p7, estP8: est.p8, estP9: est.p9,
+    gradeAnomaly: false,
     gem: null,
     // JustTCG returns priceChange30d as a percentage; normalize to decimal. Kept as `null`
     // (not coerced to 0) when JustTCG has no value — the old `|| 0` fallback made "no data"
@@ -685,6 +690,19 @@ async function applyGradedPriceSnapshot(cards) {
       if (g.p7 != null) { c.p7 = g.p7; c.p7Live = true; }
       if (g.p8 != null) { c.p8 = g.p8; c.p8Live = true; }
       if (g.p9 != null) { c.p9 = g.p9; c.p9Live = true; }
+      // Sanity check: a higher PSA grade should never price below a lower one. Live JustTCG
+      // graded data occasionally violates this (thin-market listings, a single stale outlier
+      // quote, etc. — observed on ~0.4% of the catalog, e.g. one card showing p7=$11,500 vs.
+      // p9=$2,100), and feeding a contradiction like that into the score or crack-profit math
+      // would silently distort both. Rather than guess which of the three numbers is the bad
+      // one, revert the whole card to its internally-consistent era-calibrated estimate (see
+      // EST) and flag it, so the score stays trustworthy and the UI can tell the reader this
+      // card's live grading data looked inconsistent rather than presenting it as normal.
+      if (c.p7 > c.p8 || c.p8 > c.p9) {
+        c.gradeAnomaly = true;
+        c.p7 = c.estP7; c.p8 = c.estP8; c.p9 = c.estP9;
+        c.p7Live = false; c.p8Live = false; c.p9Live = false;
+      }
     }
     return { updatedAt: snap.updatedAt, cardsChecked: snap.cardsChecked, liveCount: appliedCount };
   } catch (e) {
@@ -774,11 +792,23 @@ function compute(r) {
   // tsMom. That keeps "unknown" from ever being scored as either a confirmed win or loss,
   // and decouples its treatment from wherever tsMom's own curve happens to sit at x=0 —
   // which will drift as that curve gets retuned, but "no data = neutral" shouldn't.
+  // Volume-discounted: a 30d % change backed by only 0-1 recorded price-change events is
+  // frequently a single stale data point still sitting inside JustTCG's rolling 30-day
+  // window, not real current momentum — e.g. a card whose price hasn't moved all week can
+  // still show a huge "30d change" from one old jump 29 days ago, permanently pinning a
+  // high momentum score (and Tome Score) on an illiquid card until that one event finally
+  // ages out. Blend the momentum score toward neutral (50) in proportion to how few
+  // price-change events actually back it — full trust at MOM_VOLUME_CONFIDENCE_FLOOR+
+  // events, scaling linearly down to fully neutral at 0 events (matching the r.mom==null
+  // case below). This doesn't discard real momentum, it just stops one old data point from
+  // being treated with the same confidence as a run of recent, actively-traded price moves.
   // tsValue now runs on gradeProfitTypical (PSA 9), not the PSA 10 ceiling — same reasoning
   // as the signal fix below: the ceiling doesn't discriminate (it's positive for virtually
   // every card), so it wasn't telling the score anything real about which cards are actually
   // worth short-term attention.
-  const momScore = r.mom == null ? 50 : tsMom(r.mom);
+  const MOM_VOLUME_CONFIDENCE_FLOOR = 4;
+  const momConfidence = Math.min(1, (r.chgCount30d || 0) / MOM_VOLUME_CONFIDENCE_FLOOR);
+  const momScore = r.mom == null ? 50 : 50 + (tsMom(r.mom) - 50) * momConfidence;
   const tomeScore = Math.round((
     tsValue(gradeProfitTypical) * 0.40 +
     momScore * 0.40 +
@@ -906,7 +936,13 @@ function sparkline(h) {
 }
 
 const f$ = n => (n<0?'-$':'$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-const fPct = n => n==null ? '—' : (n>=0?'+':'')+(n*100).toFixed(0)+'%';
+// Capped display for 30d momentum: tsMom's own scoring curve already treats anything past
+// ±20% identically (see tsMom above), so a raw swing far beyond that — e.g. one thinly-traded
+// card that showed a +124,124% "30d change" off a single old data point — adds no scoring
+// information but reads as a glaring error to anyone skimming the table. Capping the *display*
+// at ±999% keeps the sign and magnitude tier legible without asserting false precision on a
+// number the score doesn't actually trust that granularly past 20% anyway.
+const fPct = n => n==null ? '—' : (n>=0?'+':'-')+Math.min(Math.abs(n*100),999).toFixed(0)+(Math.abs(n*100)>999?'%+':'%');
 // Grade-price cell: real JustTCG price when `live` is true, a "~"-prefixed fallback
 // estimate when not (era-calibrated multiplier — see EST). p7/p8/p9 always have one or
 // the other now; the null case is kept only as a defensive fallback, not an expected path.
