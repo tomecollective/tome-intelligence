@@ -48,6 +48,26 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .hdr-product{font-size:13px;font-weight:500;color:rgba(26,26,26,0.75);}
 .hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
 .hdr-pill{font-size:11px;background:rgba(26,26,26,0.85);color:#d4a72c;font-weight:600;padding:3px 10px;border-radius:20px;}
+.hdr-report{font-family:var(--sans);font-size:11px;font-weight:600;color:#1a1a1a;background:transparent;border:1px solid rgba(26,26,26,0.35);border-radius:20px;padding:4px 11px;cursor:pointer;transition:all 0.12s;white-space:nowrap;}
+.hdr-report:hover{background:rgba(26,26,26,0.85);color:var(--gold);border-color:rgba(26,26,26,0.85);}
+
+/* Report-an-issue modal */
+#reportOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;}
+#reportModal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(420px,92vw);background:var(--surface);border:0.5px solid var(--border-str);border-radius:var(--r-lg);z-index:501;padding:1.25rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+#reportModal h3{font-size:15px;margin-bottom:4px;}
+#reportModal p.rm-sub{font-size:12px;color:var(--text-3);margin-bottom:12px;line-height:1.5;}
+#reportModal label{font-size:11px;font-weight:600;color:var(--text-2);display:block;margin:10px 0 4px;}
+#reportModal input[type=text],#reportModal textarea{width:100%;padding:8px 10px;border:0.5px solid var(--border-str);border-radius:var(--r);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:12.5px;outline:none;resize:vertical;}
+#reportModal input[type=text]:focus,#reportModal textarea:focus{border-color:var(--green);background:var(--surface);}
+#reportModal .rm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+#reportModal .rm-btn{font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 14px;border-radius:var(--r);border:1px solid var(--border-str);background:transparent;color:var(--text-2);cursor:pointer;}
+#reportModal .rm-btn.primary{background:var(--green);color:#1a1a1a;border-color:var(--green);}
+#reportModal .rm-btn:disabled{opacity:0.5;cursor:default;}
+#reportModal .rm-status{font-size:11px;margin-top:8px;min-height:14px;}
+#reportModal .rm-status.ok{color:var(--up);}
+#reportModal .rm-status.err{color:var(--dn);}
+/* honeypot — hidden from real visitors, catches basic bots that fill every field */
+#reportModal .rm-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;}
 
 /* Layout */
 .wrap{max-width:1320px;margin:0 auto;padding:1.25rem 1.25rem 4rem;}
@@ -183,6 +203,11 @@ td{padding:9px 10px;vertical-align:middle;}
 .s-hold{background:var(--hold-bg);color:var(--hold-fg);border-color:var(--hold-bd);}
 .s-accum{background:var(--accum-bg);color:var(--accum-fg);border-color:var(--accum-bd);}
 .s-skip{background:var(--skip-bg);color:var(--skip-fg);border-color:var(--skip-bd);}
+.ts-wrap{display:inline-flex;align-items:center;gap:5px;}
+.conf-dot{display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0;cursor:help;}
+.conf-High{background:var(--up);}
+.conf-Some{background:#d4a72c;}
+.conf-Thin{background:var(--text-3);}
 .ts-pill{display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;width:38px;height:23px;border-radius:5px;font-family:var(--mono);}
 .ts-e{background:var(--ts-e-bg);color:var(--ts-e-fg);}
 .ts-s{background:var(--ts-s-bg);color:var(--ts-s-fg);}
@@ -207,7 +232,44 @@ td{padding:9px 10px;vertical-align:middle;}
 .footer a{color:var(--green);text-decoration:none;}
 .disclaimer{font-size:10px;color:var(--text-3);max-width:660px;margin:0.5rem auto 0;line-height:1.6;}
 
-/* Mobile */
+/* Mobile / narrow-tablet — collapses the 21-column desktop table down to the columns that
+   actually matter for a quick scan (rank, star, card, score, signal, raw price, momentum);
+   everything else stays one tap away in the existing detail drawer rather than requiring
+   horizontal scroll. Desktop is untouched — this only activates under 900px. Threshold picked
+   to cover both "mobile wide" screens (large phones, phones in landscape, small tablets) and
+   narrower phones, with a second, tighter pass below 480px for the smallest screens. */
+@media(max-width:900px){
+  .tbl-scroll table{min-width:0;}
+  /* nth-child indices match the thead order exactly: 1 #, 2 star, 3 Card, 4 Set, 5 Card #,
+     6 Game, 7 Era, 8 Tome Score, 9 Signal, 10 Raw NM, 11-14 PSA 7/8/9/10, 15 Crack Profit,
+     16 Grade Profit, 17 Max Grade ROI, 18 30d Chg, 19 Volume, 20 7d Trend, 21 TCGPlayer.
+     Kept visible: #, star, Card, Tome Score, Signal, Raw NM, 30d Chg — Set is dropped since
+     it's already shown as subtext inside the Card cell (see .cs). */
+  .tbl-scroll th:nth-child(4),  .tbl-scroll td:nth-child(4),
+  .tbl-scroll th:nth-child(5),  .tbl-scroll td:nth-child(5),
+  .tbl-scroll th:nth-child(6),  .tbl-scroll td:nth-child(6),
+  .tbl-scroll th:nth-child(7),  .tbl-scroll td:nth-child(7),
+  .tbl-scroll th:nth-child(11), .tbl-scroll td:nth-child(11),
+  .tbl-scroll th:nth-child(12), .tbl-scroll td:nth-child(12),
+  .tbl-scroll th:nth-child(13), .tbl-scroll td:nth-child(13),
+  .tbl-scroll th:nth-child(14), .tbl-scroll td:nth-child(14),
+  .tbl-scroll th:nth-child(15), .tbl-scroll td:nth-child(15),
+  .tbl-scroll th:nth-child(16), .tbl-scroll td:nth-child(16),
+  .tbl-scroll th:nth-child(17), .tbl-scroll td:nth-child(17),
+  .tbl-scroll th:nth-child(19), .tbl-scroll td:nth-child(19),
+  .tbl-scroll th:nth-child(20), .tbl-scroll td:nth-child(20),
+  .tbl-scroll th:nth-child(21), .tbl-scroll td:nth-child(21)
+  { display:none; }
+  .cc{min-width:0;}
+  .cn{font-size:12.5px;}
+  /* Game/Era: segmented buttons stay the desktop control (one click, all options visible at
+     once) but wrap badly once the filter bar has to share a narrow row — past this width they
+     hand off to the equivalent <select> dropdowns instead (same state, see the JS below). */
+  .seg-desktop-only{display:none;}
+  .seg-mobile-only{display:inline-block;}
+}
+@media(min-width:901px){ .seg-mobile-only{display:none;} }
+
 @media(max-width:700px){
   .wrap{padding:0.85rem 0.75rem 3rem;}
   .hdr{padding:0 1rem;}
@@ -229,6 +291,13 @@ td{padding:9px 10px;vertical-align:middle;}
   .pagebar{justify-content:center;}
   .pg-size{width:100%;justify-content:center;}
 }
+/* Smallest phones: drop two more columns so the remaining set (#, star, Card, Score, Signal)
+   never needs horizontal scroll even at ~360px. */
+@media(max-width:480px){
+  .tbl-scroll th:nth-child(10), .tbl-scroll td:nth-child(10),
+  .tbl-scroll th:nth-child(18), .tbl-scroll td:nth-child(18)
+  { display:none; }
+}
 </style>
 </head>
 <body>
@@ -239,8 +308,29 @@ td{padding:9px 10px;vertical-align:middle;}
   </a>
   <div class="hdr-div"></div>
   <span class="hdr-product">Tome Vault: TCG Arbitrage</span>
-  <div class="hdr-right"><span class="hdr-pill">VAULT</span></div>
+  <div class="hdr-right">
+    <button class="hdr-report" id="reportBtn" title="Report a pricing issue or bug">🚩 Report an issue</button>
+    <span class="hdr-pill">VAULT</span>
+  </div>
 </header>
+
+<!-- Report-an-issue modal — posts to the worker's /report endpoint, which forwards to
+     Tome Collective's Discord. Top-right, always available, not tied to any one card. -->
+<div id="reportOverlay"></div>
+<div id="reportModal">
+  <h3>Report an issue</h3>
+  <p class="rm-sub">Spot a price that looks wrong, a broken column, or anything else off? Tell us — this posts straight to our Discord.</p>
+  <label for="rmCard">Card or area (optional)</label>
+  <input type="text" id="rmCard" placeholder="e.g. Charizard Star (Delta Species), or “PSA 9 column”">
+  <label for="rmMsg">What's wrong?</label>
+  <textarea id="rmMsg" rows="4" placeholder="What did you see, and what did you expect instead?"></textarea>
+  <input type="text" id="rmHp" class="rm-hp" tabindex="-1" autocomplete="off">
+  <div class="rm-status" id="rmStatus"></div>
+  <div class="rm-actions">
+    <button class="rm-btn" id="rmCancel">Cancel</button>
+    <button class="rm-btn primary" id="rmSend">Send report</button>
+  </div>
+</div>
 
 <div class="wrap">
 
@@ -252,6 +342,10 @@ td{padding:9px 10px;vertical-align:middle;}
       <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Powered by Tome Analytics</div>
       <div style="margin-top:6px;font-size:11px;color:var(--text-3);background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--gold);border-radius:6px;padding:6px 10px;max-width:640px;">
       <strong style="color:var(--text-2)">Beta note:</strong> raw prices and 30-day momentum are live from JustTCG. PSA 7/8/9 prices are real JustTCG market data where available (a "~" prefix means JustTCG had no listing for that card and grade, so it falls back to an era-calibrated estimate instead). PSA 10 and population remain model estimates until further graded-data integration — treat grade signals as directional. Tome Score ranks near-term opportunity, not verified long-term appreciation — true hold/appreciation scoring needs population, rarity, and multi-year trend data we don't have yet, and is a planned future enhancement.
+    </div>
+    <div id="onboardTip" style="display:none;margin-top:8px;font-size:11px;color:var(--text-2);background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--green);border-radius:6px;padding:8px 10px;max-width:640px;">
+      <strong style="color:var(--text)">New here? Start with the chips above:</strong> <b>Top Scores</b> is the general-purpose "what looks good right now" view. <b>Best Cracks</b> and <b>Best Grades</b> narrow to the two concrete plays this tool is built around — buy a slab and crack it, or buy raw and send it in. Click any row for the full breakdown, and star a card (⭐) to add it to <b>My Cards</b>. The fee and sale-rate controls above the table change every profit number live, so it's worth matching them to how you'd actually sell.
+      <button id="onboardDismiss" style="margin-left:8px;background:none;border:none;color:var(--text-3);text-decoration:underline;cursor:pointer;font-size:11px;padding:0;">Got it</button>
     </div>
     </div>
     <div class="pg-meta"><strong id="dateLabel"></strong>Live pricing · <span style="color:var(--gold);font-weight:600">BETA</span></div>
@@ -269,20 +363,31 @@ td{padding:9px 10px;vertical-align:middle;}
   <!-- Filters -->
   <div class="fbar">
     <div class="fgroup"><span class="flbl">Game</span>
-      <div class="seg" id="gameSeg">
+      <div class="seg seg-desktop-only" id="gameSeg">
         <button class="sb active" data-v="">All</button>
         <button class="sb" data-v="Pokemon">Pokémon</button>
         <button class="sb" data-v="Lorcana">Lorcana</button>
         <button class="sb" data-v="One Piece">One Piece</button>
       </div>
+      <select class="seg-mobile-only" id="gameSelect">
+        <option value="">All</option>
+        <option value="Pokemon">Pokémon</option>
+        <option value="Lorcana">Lorcana</option>
+        <option value="One Piece">One Piece</option>
+      </select>
     </div>
     <div class="fdiv"></div>
     <div class="fgroup"><span class="flbl">Era</span>
-      <div class="seg" id="eraSeg">
+      <div class="seg seg-desktop-only" id="eraSeg">
         <button class="sb active" data-v="">All</button>
         <button class="sb" data-v="vintage">Vintage</button>
         <button class="sb" data-v="modern">Modern</button>
       </div>
+      <select class="seg-mobile-only" id="eraSelect">
+        <option value="">All</option>
+        <option value="vintage">Vintage</option>
+        <option value="modern">Modern</option>
+      </select>
     </div>
     <div class="fdiv"></div>
     <div class="fgroup"><span class="flbl">Price</span>
@@ -307,6 +412,7 @@ td{padding:9px 10px;vertical-align:middle;}
       <input type="text" id="search" placeholder="Card, set, or number…"/>
     </div>
     <span class="fcount" id="fcount">—</span>
+    <button class="clear-btn" id="exportBtn">Export CSV</button>
     <button class="clear-btn" id="clearBtn">Clear</button>
   </div>
 
@@ -355,7 +461,7 @@ td{padding:9px 10px;vertical-align:middle;}
         <th data-col="num" style="width:70px">Card #<span class="arr">↕</span></th>
         <th data-col="game" style="width:74px">Game<span class="arr">↕</span></th>
         <th data-col="era" style="width:66px">Era<span class="arr">↕</span></th>
-        <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="info-ic" data-tip="Tome Score (0–100) ranks how attractive a card looks for near-term action — not long-term price appreciation. It weighs three things: realistic (PSA 9-typical) grading upside, 30-day price momentum, and entry price — higher scores mean stronger short-term candidates. Long-term hold/appreciation scoring isn't supported yet (it needs population, rarity, and multi-year trend data we don't have) — that's a planned future enhancement. The exact weighting is proprietary and keeps evolving as our data improves." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↓</span></th>
+        <th data-col="tomeScore" class="sorted" style="width:76px">Tome Score<span class="info-ic" data-tip="Tome Score (0–100) ranks how attractive a card looks for near-term action — not long-term price appreciation. It weighs three things: realistic (PSA 9-typical) grading upside, 30-day price momentum, and entry price — higher scores mean stronger short-term candidates. Long-term hold/appreciation scoring isn't supported yet (it needs population, rarity, and multi-year trend data we don't have) — that's a planned future enhancement. The exact weighting keeps evolving as our data improves. The small dot next to the score is a data-confidence indicator (green = high, gold = partial, gray = thin) — see the card detail panel for what it's based on." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↓</span></th>
         <th data-col="signal" style="width:112px">Signal<span class="info-ic" data-tip="Crack & Flip: cracking a slab and reselling raw beats buying raw and grading it. Grade Raw: PSA 9-typical grading ROI clears a 35% minimum. Strong Score / Watch: doesn't clear a grading signal outright, but scores 75+ / 55+ on Tome Score. Skip: none of the above." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
         <th data-col="raw" style="width:64px">Raw NM<span class="arr">↕</span></th>
         <th data-col="p7" style="width:58px">PSA 7<span class="info-ic" data-tip="Real PSA 7 market price from JustTCG when available. A '~' prefix means JustTCG has no PSA 7 listing for this card yet, so this falls back to an era-calibrated estimate — one anchored near raw price rather than derived from observed PSA 7 sales, since we don't have any to calibrate against." onclick="event.stopPropagation()">ⓘ</span><span class="arr">↕</span></th>
@@ -835,10 +941,24 @@ function compute(r) {
   else if (tomeScore >= 75) signal = 'Strong Score';
   else if (tomeScore >= 55) signal = 'Watch';
 
+  // Data confidence: how much of the Tome Score is standing on real, live, actively-traded
+  // data vs. era-calibrated estimates and a thin (or zero) 30-day trading history. Two cards
+  // can land on the identical score for very different reasons — one backed by real graded
+  // sales and a busy price history, one backed by estimates and a single stale data point —
+  // and nothing else in the UI distinguishes them. High: live PSA 9 (the score's own value
+  // basis) AND enough 30d volume for full momentum confidence (matches MOM_VOLUME_CONFIDENCE_FLOOR
+  // above). Thin: no live grading at all AND effectively no momentum data. Some: everything
+  // in between.
+  const hasLiveGrade = r.p9Live;
+  const hasVolume = (r.chgCount30d || 0) >= MOM_VOLUME_CONFIDENCE_FLOOR;
+  let confidence = 'Some';
+  if (hasLiveGrade && hasVolume) confidence = 'High';
+  else if (!hasLiveGrade && !hasVolume) confidence = 'Thin';
+
   return {...r, crackP7, crackP8, crackP9, dispCrack, dispFrom,
           gradeProfitFloor, gradeProfitTypical, gradeProfit, gradeROI, typicalROI,
           feeUsed, feeTierName: appliedFeeTier ? appliedFeeTier.name : null,
-          mult:parseFloat(mult.toFixed(1)), tomeScore, signal};
+          mult:parseFloat(mult.toFixed(1)), tomeScore, signal, confidence};
 }
 
 // ═══ STATE ═════════════════════════════════════════════════════════════════════
@@ -948,6 +1068,13 @@ const fPct = n => n==null ? '—' : (n>=0?'+':'-')+Math.min(Math.abs(n*100),999)
 // the other now; the null case is kept only as a defensive fallback, not an expected path.
 const gCell = (n, live) => n==null ? '—' : (live ? f$(n) : '~'+f$(n));
 const momCls = n => n==null ? 'fl' : n>.05?'up':n<-.05?'dn':'fl';
+// Plain-language explanation for the small confidence dot next to each Tome Score — see the
+// `confidence` field computed in compute() above for the exact High/Some/Thin thresholds.
+const confTip = tier => tier === 'High'
+  ? 'live PSA 9 pricing and enough 30-day trading volume to fully trust the momentum score.'
+  : tier === 'Thin'
+  ? 'no live PSA 9 listing and little-to-no recorded trading volume — this score leans heavily on era-calibrated estimates.'
+  : 'partial live data — either the grading price or the trading volume behind this score is estimated rather than observed.';
 const pCls = n => n>0?'pos':'neg';
 const tsCls = s => s>=75?'ts-e':s>=55?'ts-s':s>=35?'ts-w':'ts-x';
 const gameCls = g => g==='Pokemon'?'gp':g==='Lorcana'?'gl':'go';
@@ -1022,7 +1149,7 @@ function render() {
       <td class="mono" style="color:var(--text-3)">${c.num}</td>
       <td><span class="gt ${gameCls(c.game)}">${c.game}</span></td>
       <td><span class="era-tag">${c.era}</span></td>
-      <td><span class="ts-pill ${tsCls(c.tomeScore)}">${c.tomeScore.toFixed(1)}</span></td>
+      <td><span class="ts-wrap"><span class="ts-pill ${tsCls(c.tomeScore)}">${c.tomeScore.toFixed(1)}</span><span class="conf-dot conf-${c.confidence}" title="Data confidence: ${c.confidence} — ${confTip(c.confidence)}"></span></span></td>
       <td><span class="sig ${s.c}">${s.i} ${c.signal}</span></td>
       <td class="mono">${f$(c.raw)}</td>
       <td class="mono">${gCell(c.p7, c.p7Live)}</td>
@@ -1113,6 +1240,27 @@ function segHandler(segId, setter, onAfter) {
 segHandler('gameSeg', v=>gameF=v, rebuildSetFilter);
 segHandler('eraSeg',  v=>eraF=v, rebuildSetFilter);
 
+// Mobile dropdown twins of gameSeg/eraSeg (see .seg-mobile-only in the CSS — only one of
+// the button group or the dropdown is ever visible at a given width, but both drive the
+// same gameF/eraF state, so each one keeps the other's on-screen selection in sync too,
+// in case the viewport crosses the breakpoint mid-session (e.g. rotating a tablet).
+function wireMobileSelect(selectId, segId, setter) {
+  document.getElementById(selectId).addEventListener('change', e => {
+    setter(e.target.value);
+    document.querySelectorAll(`#${segId} .sb`).forEach(b => b.classList.toggle('active', b.dataset.v === e.target.value));
+    rebuildSetFilter();
+    currentPage = 1;
+    render();
+  });
+}
+wireMobileSelect('gameSelect', 'gameSeg', v=>gameF=v);
+wireMobileSelect('eraSelect',  'eraSeg',  v=>eraF=v);
+function syncMobileSelects() {
+  document.getElementById('gameSelect').value = gameF;
+  document.getElementById('eraSelect').value = eraF;
+}
+document.querySelectorAll('#gameSeg .sb, #eraSeg .sb').forEach(b => b.addEventListener('click', syncMobileSelects));
+
 // Min/max price are free-text fields, not a fixed set of buttons — someone with a $100
 // budget shouldn't have to wade through 1,000+ pricier cards just because $100 wasn't one
 // of the four preset stops. Blank max = no ceiling. Blank/invalid min falls back to $25 —
@@ -1143,6 +1291,8 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   document.getElementById('minPriceInput').value='';
   document.getElementById('maxPriceInput').value='';
   ['gameSeg','eraSeg'].forEach(id=>document.querySelectorAll(`#${id} .sb`).forEach((b,i)=>b.classList.toggle('active',i===0)));
+  document.getElementById('gameSelect').value = '';
+  document.getElementById('eraSelect').value = '';
   rebuildSetFilter();
   currentPage = 1;
   render();
@@ -1271,6 +1421,7 @@ async function openDrawer(id) {
     <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Data</div>
     <div style="font-size:11px;color:var(--text-2);line-height:1.8">
       Tome Score: <strong>${c.tomeScore!=null?c.tomeScore.toFixed(1):'—'}</strong> · Signal: <strong>${c.signal??'—'}</strong><br>
+      Data confidence: <strong><span class="conf-dot conf-${c.confidence}" style="margin-right:4px"></span>${c.confidence}</strong> — ${confTip(c.confidence)}<br>
       30d price updates: ${c.chgCount30d??'—'}
     </div>
     <a class="tcg-link" style="margin-top:16px;justify-content:center;display:flex;padding:9px" href="${tcgHref(c.name,c.game)}" target="_blank" rel="noopener">Buy on TCGPlayer ↗</a>
@@ -1362,6 +1513,102 @@ document.querySelectorAll('.info-ic').forEach(ic => {
     });
   });
   ic.addEventListener('mouseout', () => { infoTip.style.display = 'none'; });
+});
+
+// ═══ CSV EXPORT ════════════════════════════════════════════════════════════════
+// Exports whatever the current filters + sort produce — not just the current page — since
+// "give me everything I'm looking at" is the useful case, not "give me these 25 rows."
+function exportCSV() {
+  const rows = getSorted(getFiltered());
+  const cols = [
+    ['name','Card'], ['set','Set'], ['num','Card #'], ['game','Game'], ['era','Era'],
+    ['tomeScore','Tome Score'], ['confidence','Data Confidence'], ['signal','Signal'],
+    ['raw','Raw NM'], ['p7','PSA 7'], ['p8','PSA 8'], ['p9','PSA 9'], ['p10','PSA 10 Est'],
+    ['dispCrack','Crack Profit'], ['gradeProfitFloor','Grade Profit Floor'],
+    ['gradeProfitTypical','Grade Profit Typical'], ['gradeProfit','Grade Profit Ceiling'],
+    ['gradeROI','Max Grade ROI %'], ['mom','30d Chg %'], ['chgCount30d','Volume'],
+  ];
+  const esc = v => {
+    if (v == null) return '';
+    const s = typeof v === 'number' ? String(v) : String(v).replace(/"/g, '""');
+    return /[",\n]/.test(s) ? `"${s}"` : s;
+  };
+  const header = cols.map(c => c[1]).join(',');
+  const lines = rows.map(r => cols.map(([key]) => {
+    let v = r[key];
+    if (key === 'mom' && v != null) v = (v * 100).toFixed(1);
+    return esc(v);
+  }).join(','));
+  const csv = [header, ...lines].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tome-vault-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+document.getElementById('exportBtn').addEventListener('click', exportCSV);
+
+// ═══ REPORT AN ISSUE (top-right button → worker → Discord) ═════════════════════
+// The worker owns the actual Discord webhook (kept server-side, same pattern as the
+// JustTCG key) — this just posts the form fields to a new /report route on the same
+// proxy. No accounts to attach this to yet, so it's a free-text report, not a per-card
+// button; see the launch audit for the fuller "add real per-card reporting" idea.
+const reportBtn = document.getElementById('reportBtn');
+const reportOverlay = document.getElementById('reportOverlay');
+const reportModal = document.getElementById('reportModal');
+const rmStatus = document.getElementById('rmStatus');
+const rmSend = document.getElementById('rmSend');
+function openReportModal() {
+  document.getElementById('rmCard').value = '';
+  document.getElementById('rmMsg').value = '';
+  document.getElementById('rmHp').value = '';
+  rmStatus.textContent = ''; rmStatus.className = 'rm-status';
+  rmSend.disabled = false; rmSend.textContent = 'Send report';
+  reportOverlay.style.display = 'block';
+  reportModal.style.display = 'block';
+}
+function closeReportModal() { reportOverlay.style.display = 'none'; reportModal.style.display = 'none'; }
+reportBtn.addEventListener('click', openReportModal);
+reportOverlay.addEventListener('click', closeReportModal);
+document.getElementById('rmCancel').addEventListener('click', closeReportModal);
+rmSend.addEventListener('click', async () => {
+  const card = document.getElementById('rmCard').value.trim();
+  const msg = document.getElementById('rmMsg').value.trim();
+  const hp = document.getElementById('rmHp').value;
+  if (hp) return;   // honeypot tripped — silently drop, no need to tip off a bot
+  if (!msg) { rmStatus.textContent = 'Add a description first.'; rmStatus.className = 'rm-status err'; return; }
+  rmSend.disabled = true; rmSend.textContent = 'Sending…';
+  try {
+    const res = await fetch(`${WORKER_URL}/report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ card, message: msg, page: location.href }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    rmStatus.textContent = 'Sent — thanks for flagging it.';
+    rmStatus.className = 'rm-status ok';
+    rmSend.textContent = 'Sent ✓';
+    setTimeout(closeReportModal, 1400);
+  } catch (e) {
+    rmStatus.textContent = "Couldn't send — try again in a moment.";
+    rmStatus.className = 'rm-status err';
+    rmSend.disabled = false; rmSend.textContent = 'Send report';
+  }
+});
+
+// First-visit onboarding tip — shown once per browser, dismissed permanently after.
+// Deliberately separate from the (permanent) beta note above: that one explains what the
+// data means, this one explains what to actually click first on a genuinely dense screen.
+if (!localStorage.getItem('tomeOnboardDismissed')) {
+  document.getElementById('onboardTip').style.display = 'block';
+}
+document.getElementById('onboardDismiss').addEventListener('click', () => {
+  localStorage.setItem('tomeOnboardDismissed', '1');
+  document.getElementById('onboardTip').style.display = 'none';
 });
 
 // ═══ INIT ══════════════════════════════════════════════════════════════════════
