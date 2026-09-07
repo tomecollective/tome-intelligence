@@ -298,6 +298,12 @@ td{padding:9px 10px;vertical-align:middle;}
   .tbl-scroll th:nth-child(18), .tbl-scroll td:nth-child(18)
   { display:none; }
 }
+
+/* ── Subscriber lock panel ─────────────────────────────────────────────────── */
+#lockedPanel{display:none;max-width:720px;margin:2rem auto;padding:1.25rem 1.5rem;background:var(--surface);border:1px solid var(--gold);border-radius:var(--r-lg);}
+#lockedPanel .lk-title{font-size:16px;font-weight:700;color:var(--gold);margin-bottom:6px;}
+#lockedPanel p{font-size:13px;color:var(--text-2);line-height:1.55;margin:0 0 6px;}
+#lockedPanel a{color:var(--gold);font-weight:600;}
 </style>
 </head>
 <body>
@@ -332,7 +338,13 @@ td{padding:9px 10px;vertical-align:middle;}
   </div>
 </div>
 
-<div class="wrap">
+<div id="lockedPanel">
+  <div class="lk-title">Tome Vault subscribers only</div>
+  <p>This dashboard's live data is part of Tome Vault. Open it from the Dashboards page on <a href="https://read.tomecollective.com/p/dashboards" target="_blank" rel="noopener">read.tomecollective.com</a> (that link carries your access key), or subscribe at <a href="https://tomecollective.com" target="_blank" rel="noopener">tomecollective.com</a>.</p>
+  <p id="lockedDetail"></p>
+</div>
+
+<div class="wrap" id="viewMain">
 
   <div class="pg-hd">
     <div>
@@ -574,6 +586,50 @@ const tcgImg = (id, w) => `https://tcgplayer-cdn.tcgplayer.com/product/${id}_${w
 
 // ═══ LIVE DATA — JustTCG via Cloudflare Worker proxy ═══════════════════════════
 const WORKER_URL = 'https://tome-proxy.tomecollective.workers.dev';
+
+// ── Subscriber access key ───────────────────────────────────────────────────────
+// Every data read on the Worker is gated by X-Tome-Key (same pattern as Fast Break
+// and the Chase Index). The key arrives on the link from the Dashboards page
+// (?key=...), is kept for this tab in sessionStorage so reloads keep working, and
+// is stripped from the address bar. It is never written to localStorage.
+const SUB_KEY = (() => {
+  let key = null;
+  try {
+    const params = new URLSearchParams(location.search);
+    key = params.get('key');
+    if (key) {
+      try { sessionStorage.setItem('tome_key', key); } catch (e) {}
+      params.delete('key');
+      const clean = `${location.pathname}${params.toString() ? '?' + params.toString() : ''}${location.hash}`;
+      history.replaceState(null, '', clean);
+    } else {
+      try { key = sessionStorage.getItem('tome_key'); } catch (e) {}
+    }
+  } catch (e) {}
+  return key || '';
+})();
+function showLocked() {
+  const panel = document.getElementById('lockedPanel');
+  if (!panel) return;
+  panel.style.display = 'block';
+  document.getElementById('lockedDetail').textContent = SUB_KEY
+    ? 'The access key on this link is no longer valid. Open the dashboard again from the Dashboards page.' : '';
+  const main = document.getElementById('viewMain');
+  if (main) main.style.display = 'none';
+}
+// All Worker calls go through here so the key rides as a header (never as a query
+// string on the data requests) and a 401 {locked:true} swaps in the lock panel.
+async function proxyFetch(url, init = {}) {
+  const headers = Object.assign({}, init.headers || {});
+  if (SUB_KEY) headers['X-Tome-Key'] = SUB_KEY;
+  const res = await fetch(url, Object.assign({}, init, { headers }));
+  if (res.status === 401) {
+    let body = null;
+    try { body = await res.clone().json(); } catch (e) {}
+    if (body && body.locked) showLocked();
+  }
+  return res;
+}
 const PER_GAME_LIMIT = 100;   // top cards per game by price (1 API call each; edge-cached 6h)
 
 // Era classification — mirrors the Pokemon Chase Index convention: Modern = XY forward,
@@ -590,7 +646,7 @@ function ensurePokemonSetEras() {
   if (!pokemonSetEraPromise) {
     pokemonSetEraPromise = (async () => {
       try {
-        const res = await fetch(`${WORKER_URL}/sets?game=${encodeURIComponent(GAME_SLUGS['Pokemon'])}`);
+        const res = await proxyFetch(`${WORKER_URL}/sets?game=${encodeURIComponent(GAME_SLUGS['Pokemon'])}`);
         if (res.ok) {
           const json = await res.json();
           (json.data || []).forEach(s => {
@@ -718,7 +774,7 @@ const ASC_SHARE = 0.5;   // portion of each game's cap spent on the cheapest-fir
 const UNIVERSE_FLOOR = 10;
 
 async function fetchPage(g, offset, order) {
-  const res = await fetch(
+  const res = await proxyFetch(
     `${WORKER_URL}/cards?game=${encodeURIComponent(GAME_SLUGS[g] || g)}` +
     `&condition=${encodeURIComponent('Near Mint')}` +    // server-side: singles only, no sealed
     `&orderBy=price&order=${order}&limit=${PER_GAME_LIMIT}&offset=${offset}` +
@@ -784,7 +840,7 @@ async function loadLiveData() {
 // caller can show an honest status line either way.
 async function applyGradedPriceSnapshot(cards) {
   try {
-    const res = await fetch(`${WORKER_URL}/graded-prices`);
+    const res = await proxyFetch(`${WORKER_URL}/graded-prices`);
     if (!res.ok) return null;   // 503 = no snapshot yet; page just stays estimate-only
     const snap = await res.json();
     const byId = cards.reduce((m, c) => (m[c.id] = c, m), {});
@@ -1432,7 +1488,7 @@ async function openDrawer(id) {
   o.onclick = closeDrawer;
   // Progressive: swap in true daily history once snapshots accumulate
   try {
-    const res = await fetch(`${HISTORY_URL}?game=${encodeURIComponent(GAME_SLUGS[c.game]||c.game)}&id=${encodeURIComponent(c.id)}`);
+    const res = await proxyFetch(`${HISTORY_URL}?game=${encodeURIComponent(GAME_SLUGS[c.game]||c.game)}&id=${encodeURIComponent(c.id)}`);
     if (res.ok) {
       const hist = await res.json();
       if (hist.prices && hist.prices.length > (c.h7?.length||0)) {
@@ -1583,7 +1639,7 @@ rmSend.addEventListener('click', async () => {
   if (!msg) { rmStatus.textContent = 'Add a description first.'; rmStatus.className = 'rm-status err'; return; }
   rmSend.disabled = true; rmSend.textContent = 'Sending…';
   try {
-    const res = await fetch(`${WORKER_URL}/report`, {
+    const res = await proxyFetch(`${WORKER_URL}/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ card, message: msg, page: location.href }),
@@ -1628,6 +1684,7 @@ document.getElementById('tbody').innerHTML =
         '<tr><td colspan="21" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
         'Could not load card data.' + (errors.length ? '<br><span style="font-size:11px">' + errors.join(' · ') + '</span>' : '') +
         '<br><span style="font-size:11px">Check the worker URL and try refreshing.</span></td></tr>';
+      if (!SUB_KEY) showLocked();
       return;
     }
     CARDS = cards;
