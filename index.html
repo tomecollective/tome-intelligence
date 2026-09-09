@@ -315,7 +315,7 @@ td{padding:9px 10px;vertical-align:middle;}
   <div class="hdr-div"></div>
   <span class="hdr-product">Tome Vault: TCG Arbitrage</span>
   <div class="hdr-right">
-    <button class="hdr-report" id="reportBtn" title="Report a pricing issue or bug">🚩 Report an issue</button>
+    <a class="hdr-report" href="tome-score-methodology.html" target="_blank" rel="noopener" title="How the Tome Score, Grade Profit, and Crack Profit are computed" style="text-decoration:none;display:inline-flex;align-items:center;">How it works</a><button class="hdr-report" id="reportBtn" title="Report a pricing issue or bug">🚩 Report an issue</button>
     <span class="hdr-pill">VAULT</span>
   </div>
 </header>
@@ -340,7 +340,7 @@ td{padding:9px 10px;vertical-align:middle;}
 
 <div id="lockedPanel">
   <div class="lk-title">Tome Vault subscribers only</div>
-  <p>This dashboard's live data is part of Tome Vault. Open it from the Dashboards page on <a href="https://read.tomecollective.com/p/dashboards" target="_blank" rel="noopener">read.tomecollective.com</a> (that link carries your access key), or subscribe at <a href="https://tomecollective.com" target="_blank" rel="noopener">tomecollective.com</a>.</p>
+  <p>This dashboard's live data is part of Tome Vault. Log in and open it from the Dashboards page on <a href="https://read.tomecollective.com/p/dashboards" target="_blank" rel="noopener">read.tomecollective.com</a> (that button carries your personal access), or subscribe at <a href="https://tomecollective.com" target="_blank" rel="noopener">tomecollective.com</a>.</p>
   <p id="lockedDetail"></p>
 </div>
 
@@ -369,7 +369,7 @@ td{padding:9px 10px;vertical-align:middle;}
     <button class="chip" data-preset="cracks"><span class="chip-icon">🔨</span>Best Cracks<span class="chip-count" id="cCracks">—</span></button>
     <button class="chip" data-preset="grades"><span class="chip-icon">🎯</span>Best Grades<span class="chip-count" id="cGrades">—</span></button>
     <button class="chip" data-preset="movers"><span class="chip-icon">📈</span>Biggest Movers<span class="chip-count" id="cMovers">—</span></button>
-    <button class="chip" id="watchChip"><span class="chip-icon">⭐</span>My Cards<span class="chip-count" id="cWatch">0</span></button>
+    <button class="chip" id="watchChip"><span class="chip-icon">⭐</span>My Cards<span class="chip-count" id="cWatch">0</span></button><span id="watchSyncState" style="font-size:10.5px;color:var(--text-3);margin-left:6px;align-self:center;"></span>
   </div>
 
   <!-- Filters -->
@@ -521,7 +521,7 @@ td{padding:9px 10px;vertical-align:middle;}
 
   <div class="footer">
     <div>© Tome Collective · <a href="https://tomecollective.com" target="_blank">tomecollective.com</a> · Pricing data provided by <a href="https://justtcg.com" target="_blank" rel="noopener">JustTCG</a></div>
-    <div class="disclaimer">Informational only — not investment or financial advice. PSA 7/8/9 prices are real JustTCG market data where available, falling back to an era-calibrated estimate (marked "~") when JustTCG has no listing for that card and grade; PSA 10 remains a model estimate for every card. Grade Profit shows a range across possible outcomes (PSA 8 floor to PSA 10 ceiling); Max Grade ROI is the PSA 10 best case, not an expectation — actual grading outcomes vary by card condition and centering, and most raw cards do not come back a 10. Cracking slabs is irreversible. Crack Profit assumes the cracked card resells at full NM raw pricing, net of your selected net sale rate — actual resale value can vary with real condition and centering. Cards under $10 are excluded. Era classifications (Vintage / Modern) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a> — Modern is XY forward, Vintage is anything before XY. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
+    <div class="disclaimer">Informational only — not investment or financial advice. PSA 7/8/9 prices are real JustTCG market data where available, falling back to an era-calibrated estimate (marked "~") when JustTCG has no listing for that card and grade; PSA 10 remains a model estimate for every card. Grade Profit shows a range across possible outcomes (PSA 8 floor to PSA 10 ceiling); Max Grade ROI is the PSA 10 best case, not an expectation — actual grading outcomes vary by card condition and centering, and most raw cards do not come back a 10. Cracking slabs is irreversible. Crack Profit assumes the cracked card resells at full NM raw pricing, net of your selected net sale rate — actual resale value can vary with real condition and centering. Cards under $10 are excluded. Every formula, the PSA fee table, and a coverage FAQ are on the <a href="tome-score-methodology.html" style="color:var(--green)">Tome Score methodology</a> page. Era classifications (Vintage / Modern) follow our published <a href="era-methodology.html" style="color:var(--green)">era methodology</a> — Modern is XY forward, Vintage is anything before XY. TCGPlayer links are affiliate links — Tome Collective may earn a commission at no additional cost to you. Verify all prices before acting.</div>
   </div>
 </div>
 
@@ -592,6 +592,12 @@ const WORKER_URL = 'https://tome-proxy.tomecollective.workers.dev';
 // and the Chase Index). The key arrives on the link from the Dashboards page
 // (?key=...), is kept for this tab in sessionStorage so reloads keep working, and
 // is stripped from the address bar. It is never written to localStorage.
+// Two credentials are understood. ?key= is the shared Vault key (kept in sessionStorage
+// for this tab only). ?sid= is the reader's own Beehiiv subscription id, filled in by
+// the {{api_subscription_id}} merge tag on the Dashboards page; it is personal and
+// revocable, so it is kept in localStorage so the dashboard keeps working on this
+// device without going back through the Dashboards page. Both are stripped from the
+// address bar and never sent to analytics.
 const SUB_KEY = (() => {
   let key = null;
   try {
@@ -599,21 +605,50 @@ const SUB_KEY = (() => {
     key = params.get('key');
     if (key) {
       try { sessionStorage.setItem('tome_key', key); } catch (e) {}
-      params.delete('key');
-      const clean = `${location.pathname}${params.toString() ? '?' + params.toString() : ''}${location.hash}`;
-      history.replaceState(null, '', clean);
     } else {
       try { key = sessionStorage.getItem('tome_key'); } catch (e) {}
     }
   } catch (e) {}
   return key || '';
 })();
-function showLocked() {
+const SUB_ID = (() => {
+  let sid = null;
+  try {
+    const params = new URLSearchParams(location.search);
+    sid = (params.get('sid') || '').trim();
+    if (sid && /^(sub_)?[0-9a-f-]{36}$/i.test(sid)) {
+      if (!/^sub_/i.test(sid)) sid = 'sub_' + sid;
+      try { localStorage.setItem('tome_sid', sid); } catch (e) {}
+    } else {
+      sid = null;
+      try { sid = localStorage.getItem('tome_sid'); } catch (e) {}
+    }
+  } catch (e) {}
+  return sid || '';
+})();
+(() => {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.has('key') || params.has('sid')) {
+      params.delete('key'); params.delete('sid');
+      const clean = `${location.pathname}${params.toString() ? '?' + params.toString() : ''}${location.hash}`;
+      history.replaceState(null, '', clean);
+    }
+  } catch (e) {}
+})();
+function showLocked(reason) {
   const panel = document.getElementById('lockedPanel');
   if (!panel) return;
   panel.style.display = 'block';
-  document.getElementById('lockedDetail').textContent = SUB_KEY
-    ? 'The access key on this link is no longer valid. Open the dashboard again from the Dashboards page.' : '';
+  const detail = {
+    inactive: 'Your subscription is no longer active. Renew on read.tomecollective.com to restore access.',
+    tier: 'Your plan does not include TCG Arbitrage. Tome Vault or the Edge + Vault Bundle unlocks it.',
+    unknown: 'We could not match this link to a subscription. Log in on read.tomecollective.com and open the dashboard from the Dashboards page again.',
+    retry: 'We could not verify your subscription just now. Refresh in a minute.',
+  }[reason] || ((SUB_KEY || SUB_ID)
+    ? 'The access on this link is no longer valid. Open the dashboard again from the Dashboards page.' : '');
+  document.getElementById('lockedDetail').textContent = detail;
+  if (reason === 'unknown' || reason === 'inactive') { try { localStorage.removeItem('tome_sid'); } catch (e) {} }
   const main = document.getElementById('viewMain');
   if (main) main.style.display = 'none';
 }
@@ -622,11 +657,13 @@ function showLocked() {
 async function proxyFetch(url, init = {}) {
   const headers = Object.assign({}, init.headers || {});
   if (SUB_KEY) headers['X-Tome-Key'] = SUB_KEY;
+  if (SUB_ID) headers['X-Tome-Sub'] = SUB_ID;
   const res = await fetch(url, Object.assign({}, init, { headers }));
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 503) {
     let body = null;
     try { body = await res.clone().json(); } catch (e) {}
-    if (body && body.locked) showLocked();
+    if (body && body.locked) showLocked(body.reason);
+    else if (body && body.retry) showLocked('retry');
   }
   return res;
 }
@@ -1019,9 +1056,63 @@ function compute(r) {
 
 // ═══ STATE ═════════════════════════════════════════════════════════════════════
 let WATCHLIST = new Set(JSON.parse(localStorage.getItem('tomeWatchlist') || '[]'));
+// ── My Cards cloud sync ──────────────────────────────────────────────────────
+// With a subscription id the list lives on the Worker (GET/PUT /mycards) keyed to
+// the subscription, so every device that opens the dashboard from the Dashboards
+// page sees the same cards. localStorage stays as the offline copy. First sync
+// merges the two (union) so nothing starred before sync is lost; after that the
+// list is written through on every change (debounced).
+let WATCH_SYNC = { enabled: false, state: 'local', timer: null };
+function saveWatchLocal() { try { localStorage.setItem('tomeWatchlist', JSON.stringify([...WATCHLIST])); } catch (e) {} }
+function setWatchSyncState(state) {
+  WATCH_SYNC.state = state;
+  const el = document.getElementById('watchSyncState');
+  if (!el) return;
+  el.textContent = { synced: 'Synced', saving: 'Saving…', error: 'Sync failed', local: 'This device only' }[state] || '';
+  el.title = state === 'local' ? 'Open the dashboard from the Dashboards page to sync My Cards across devices.' : '';
+}
+async function pushWatchlist() {
+  if (!WATCH_SYNC.enabled) return;
+  setWatchSyncState('saving');
+  try {
+    const res = await proxyFetch(`${WORKER_URL}/mycards`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cards: [...WATCHLIST] }),
+    });
+    setWatchSyncState(res.ok ? 'synced' : 'error');
+  } catch (e) { setWatchSyncState('error'); }
+}
+function scheduleWatchPush() {
+  if (!WATCH_SYNC.enabled) return;
+  clearTimeout(WATCH_SYNC.timer);
+  WATCH_SYNC.timer = setTimeout(pushWatchlist, 800);
+}
+async function syncWatchlist() {
+  if (!SUB_ID) { setWatchSyncState('local'); return; }
+  try {
+    const res = await proxyFetch(`${WORKER_URL}/mycards`);
+    if (!res.ok) { setWatchSyncState('local'); return; }
+    const body = await res.json();
+    if (!body || body.sync !== true) { setWatchSyncState('local'); return; }
+    WATCH_SYNC.enabled = true;
+    const remote = new Set(Array.isArray(body.cards) ? body.cards : []);
+    // First sync on this device: union, so cards starred before sync existed are kept.
+    // Every later load: the server copy wins, so a card removed on another device
+    // does not come back from this device's stale offline copy.
+    let firstSync = true;
+    try { firstSync = localStorage.getItem('tome_synced_sid') !== SUB_ID; } catch (e) {}
+    const before = [...WATCHLIST].sort().join(',');
+    if (firstSync) { for (const id of remote) WATCHLIST.add(id); }
+    else { WATCHLIST = new Set(remote); }
+    saveWatchLocal();
+    try { localStorage.setItem('tome_synced_sid', SUB_ID); } catch (e) {}
+    if ([...WATCHLIST].sort().join(',') !== before) render();
+    if ([...WATCHLIST].some(id => !remote.has(id))) await pushWatchlist(); else setWatchSyncState('synced');
+  } catch (e) { setWatchSyncState('local'); }
+}
 function toggleWatch(id) {
   WATCHLIST.has(id) ? WATCHLIST.delete(id) : WATCHLIST.add(id);
-  localStorage.setItem('tomeWatchlist', JSON.stringify([...WATCHLIST]));
+  saveWatchLocal();
+  scheduleWatchPush();
   render();
 }
 let watchOnly = false;
@@ -1684,7 +1775,7 @@ document.getElementById('tbody').innerHTML =
         '<tr><td colspan="21" style="text-align:center;padding:3rem;color:var(--text-3);font-size:13px">' +
         'Could not load card data.' + (errors.length ? '<br><span style="font-size:11px">' + errors.join(' · ') + '</span>' : '') +
         '<br><span style="font-size:11px">Check the worker URL and try refreshing.</span></td></tr>';
-      if (!SUB_KEY) showLocked();
+      if (!SUB_KEY && !SUB_ID) showLocked();
       return;
     }
     CARDS = cards;
@@ -1692,6 +1783,7 @@ document.getElementById('tbody').innerHTML =
     rebuildSetFilter();
     markSortedHeader();
     render();
+    syncWatchlist();
     if (errors.length) {
       console.warn('Partial load:', errors);
       const note = document.createElement('div');
@@ -1738,7 +1830,8 @@ document.getElementById('tbody').innerHTML =
   !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session identify reset get_distinct_id get_session_id set_config startSessionRecording stopSessionRecording opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
   posthog.init(KEY, { api_host: HOST, person_profiles: 'identified_only', autocapture: true, capture_pageview: true, capture_pageleave: true });
   // Segment every event by dashboard and plan. The access key itself is never sent.
-  var hasKey = (typeof SUB_KEY !== 'undefined') && !!SUB_KEY;
-  posthog.register({ dashboard: 'tcg-arbitrage', tier: hasKey ? 'vault' : 'none', access: hasKey ? 'member' : 'locked' });
+  var hasKey = ((typeof SUB_KEY !== 'undefined') && !!SUB_KEY) || ((typeof SUB_ID !== 'undefined') && !!SUB_ID);
+  var authVia = (typeof SUB_ID !== 'undefined' && SUB_ID) ? 'subscription' : (hasKey ? 'key' : 'none');
+  posthog.register({ dashboard: 'tcg-arbitrage', tier: hasKey ? 'vault' : 'none', access: hasKey ? 'member' : 'locked', auth_via: authVia });
 })();
 </script>

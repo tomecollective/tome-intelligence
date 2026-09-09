@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Tome Score Methodology &amp; Coverage FAQ — Tome Collective</title>
+<meta name="description" content="How Tome Vault: TCG Arbitrage computes the Tome Score, Grade Profit, Crack Profit, and PSA estimates, and what the dashboard does and does not cover."/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--green:#0C7958;--gold:#FFB515;--bg:#f5f6f2;--surface:#fff;--border:rgba(0,0,0,0.09);
+--text:#18190f;--text-2:#484a40;--text-3:#787a6e;--sans:'Inter',system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1009;--surface:#181910;--border:rgba(255,255,255,0.08);
+--text:#eaecdf;--text-2:#a8aa9c;--text-3:#6a6c60;}}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.65;}
+.hdr{background:var(--green);height:50px;display:flex;align-items:center;padding:0 1.5rem;gap:8px;}
+.hdr a{display:flex;align-items:center;gap:7px;text-decoration:none;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gold);}
+.hdr span{font-size:14px;font-weight:600;color:#fff;}
+.wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 4rem;}
+h1{font-size:26px;font-weight:700;letter-spacing:-0.5px;margin-bottom:0.5rem;}
+.sub{font-size:14px;color:var(--text-3);margin-bottom:1.5rem;}
+h2{font-size:17px;font-weight:600;margin:2.2rem 0 0.6rem;padding-top:1.2rem;border-top:0.5px solid var(--border);}
+h3{font-size:14px;font-weight:600;margin:1.2rem 0 0.35rem;}
+p{font-size:14px;color:var(--text-2);margin-bottom:0.9rem;}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:0.75rem 0 1.25rem;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;overflow:hidden;}
+th{background:rgba(12,121,88,0.08);padding:9px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-2);}
+td{padding:9px 12px;border-top:0.5px solid var(--border);color:var(--text-2);vertical-align:top;}
+td:first-child{font-weight:600;color:var(--text);white-space:nowrap;}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap;}
+.formula{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:0.7rem 0.9rem;margin:0.5rem 0 1rem;color:var(--text);overflow-x:auto;white-space:nowrap;}
+.note{background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--gold);border-radius:8px;padding:0.9rem 1.1rem;font-size:13px;color:var(--text-2);margin:1.25rem 0;}
+.toc{font-size:13px;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:0.9rem 1.1rem;margin-bottom:1.5rem;}
+.toc a{display:inline-block;margin:2px 14px 2px 0;text-decoration:none;font-weight:500;}
+.faq h3{margin-top:1.4rem;}
+a{color:var(--green);}
+.back{display:inline-block;margin-top:2rem;font-size:13px;font-weight:500;text-decoration:none;}
+.small{font-size:12px;color:var(--text-3);}
+</style>
+</head>
+<body>
+<header class="hdr"><a href="index.html"><div class="dot"></div><span>Tome Collective</span></a></header>
+<div class="wrap">
+<h1>Tome Score Methodology &amp; Coverage FAQ</h1>
+<div class="sub">How Tome Vault: TCG Arbitrage turns raw and graded prices into the Tome Score, Grade Profit, Crack Profit, and a signal, and what the dashboard does not cover. Last revised September 9, 2026.</div>
+
+<div class="toc">
+<a href="#prices">Where prices come from</a><a href="#psa">PSA 7, 8, 9, and 10</a><a href="#costs">Sale rate and fees</a><a href="#grade">Grade Profit</a><a href="#crack">Crack Profit</a><a href="#score">The Tome Score</a><a href="#signal">Signals</a><a href="#confidence">Confidence</a><a href="#faq">Coverage FAQ</a><a href="#track">Track record</a>
+</div>
+
+<p>Every number on the dashboard is either an observed market price, a fee schedule you can look up, or a formula on this page. Nothing is hand-adjusted per card. Where the dashboard has to estimate rather than observe, it says so with a "~" in front of the figure.</p>
+
+<h2 id="prices">Where the prices come from</h2>
+<p>Raw prices are Near Mint market prices from JustTCG for Pokemon, Disney Lorcana, and One Piece (English). The dashboard loads roughly the 2,900 highest-relevance cards at or above $10: for each game it pulls half of its budget cheapest-first and half priciest-first, because crack economics favor the low end of the $10+ range while grading upside favors the high end. Raw prices are refreshed from JustTCG through a six-hour edge cache, so a raw price is never more than about six hours old when you load the page.</p>
+<p>Alongside the price, each card carries a 30-day price change and a 30-day count of recorded price-change events, which the dashboard uses as a rough volume proxy. Cards whose only recent data point looks like a stale listing are excluded from scoring rather than scored on bad data.</p>
+
+<h2 id="psa">PSA 7, 8, 9, and 10</h2>
+<p>PSA 7, 8, and 9 values are real JustTCG graded-market prices whenever JustTCG has a listing for that card at that grade. Because the graded catalog is large and the API is rate-limited, the graded snapshot is rebuilt on a rotation: one third of the catalog is re-checked each day at 9:00 AM Central, so any individual card's graded prices are at most three days old. When no graded listing exists, the dashboard falls back to an era-calibrated estimate and marks it with "~".</p>
+<p>PSA 10 is always a model estimate. There is no live PSA 10 feed in the dashboard yet, so every PSA 10 figure is the raw price times an era multiplier. Treat it as a ceiling, not a quote.</p>
+<table>
+<tr><th>Era</th><th>PSA 7</th><th>PSA 8</th><th>PSA 9</th><th>PSA 10</th></tr>
+<tr><td>Vintage (pre-XY)</td><td class="num">1.10× raw</td><td class="num">1.25× raw</td><td class="num">2.1× raw</td><td class="num">7.0× raw</td></tr>
+<tr><td>Modern (XY forward, Lorcana, One Piece)</td><td class="num">0.95× raw</td><td class="num">1.05× raw</td><td class="num">1.7× raw</td><td class="num">5.5× raw</td></tr>
+</table>
+<p class="small">Fallback multipliers, used only when live graded data is missing for that grade. Era boundaries follow the <a href="era-methodology.html">era methodology</a>. If live PSA 7, 8, and 9 prices arrive out of order (a PSA 8 above a PSA 9, which thin markets sometimes produce), the dashboard discards the live set for that card and uses the estimate instead.</p>
+
+<h2 id="costs">Sale rate and grading fees</h2>
+<p>Every profit figure is net of a sale rate, which is the share of the sale price you keep after marketplace fees and shipping. The default is 80%; the toggle at the top of the dashboard lets you change it, and every column recalculates.</p>
+<p>Grading fees use PSA's published single-card service tiers as of August 2026. PSA requires the tier to match the card's declared value, so the dashboard picks the cheapest tier whose value cap covers the card's PSA 10 estimate, which is the conservative choice for insurance purposes.</p>
+<table>
+<tr><th>PSA tier</th><th>Fee</th><th>Declared value up to</th></tr>
+<tr><td>Regular</td><td class="num">$80</td><td class="num">$1,500</td></tr>
+<tr><td>Express</td><td class="num">$150</td><td class="num">$2,500</td></tr>
+<tr><td>Super Express</td><td class="num">$350</td><td class="num">$5,000</td></tr>
+<tr><td>Walk-Through</td><td class="num">$600</td><td class="num">$10,000</td></tr>
+<tr><td>Premium 1</td><td class="num">$1,000</td><td class="num">$25,000</td></tr>
+<tr><td>Premium 2</td><td class="num">$2,000</td><td class="num">$50,000</td></tr>
+<tr><td>Premium 3</td><td class="num">$3,000</td><td class="num">$100,000</td></tr>
+<tr><td>Premium 5</td><td class="num">$5,000</td><td class="num">$250,000</td></tr>
+<tr><td>Premium 10</td><td class="num">$10,000</td><td class="num">above $250,000</td></tr>
+</table>
+<p class="small">PSA's Value tier is paused as of this writing and bulk submissions require 50 cards, so neither is modeled. PSA revises pricing periodically; this table is re-verified when it does.</p>
+
+<h2 id="grade">Grade Profit and Max Grade ROI</h2>
+<p>Grade Profit is what you would net by buying the raw card, grading it, and selling the slab. The dashboard shows a range because the grade you get back is the whole bet.</p>
+<div class="formula">Grade Profit (grade) = PSA price at that grade × sale rate − raw price − PSA fee</div>
+<table>
+<tr><th>Figure</th><th>Grade assumed</th><th>Read it as</th></tr>
+<tr><td>Floor</td><td>PSA 8</td><td>The outcome if the card comes back a mediocre grade.</td></tr>
+<tr><td>Typical</td><td>PSA 9</td><td>The realistic outcome for a clean raw card. This is the figure the Tome Score and the Grade Raw signal use.</td></tr>
+<tr><td>Ceiling</td><td>PSA 10</td><td>Best case. Most raw cards do not come back a 10.</td></tr>
+</table>
+<div class="formula">Max Grade ROI = Grade Profit (PSA 10) ÷ raw price × 100</div>
+<p>Max Grade ROI is deliberately labeled "Max": it is the PSA 10 ceiling expressed as a percentage, useful for ranking, not for expecting. The card detail panel shows the PSA 8 and PSA 9 outcomes next to it.</p>
+
+<h2 id="crack">Crack Profit</h2>
+<p>Crack Profit answers a different question: is a graded slab selling for less than the raw card inside it? If so, buying the slab, cracking it, and reselling the card raw nets the difference.</p>
+<div class="formula">Crack Profit (grade) = raw price × sale rate − PSA slab price at that grade</div>
+<p>The "Crack vs." toggle picks which slab the column benchmarks: PSA 8 by default, or PSA 7 or PSA 9. The dashboard computes all three; the toggle only changes which one is displayed and sorted. Cracking assumes the card resells at full Near Mint raw pricing, which is a judgment you should make with the card in hand, since a slab does not guarantee the card is NM by raw-market standards. Cracking is irreversible.</p>
+
+<h2 id="score">The Tome Score</h2>
+<p>The Tome Score is a 0 to 100 ranking of how interesting a card is to a grade-and-flip or crack-and-flip buyer right now. It is not a prediction of price and not a rating of the card. It blends three factors, each scored 0 to 100 on a fixed curve, then weighted:</p>
+<div class="formula">Tome Score = 0.40 × Value + 0.40 × Momentum + 0.20 × Entry</div>
+<h3>Value (40%)</h3>
+<p>Dollar upside from grading, using the PSA 9 "typical" Grade Profit. The curve is log-spaced above zero because grading upside in this catalog spans from about $50 to over $60,000, and a linear scale would flatten one end or the other. Negative upside scores between 2 and 15; $50 of upside scores about 40; $200 about 63; $1,200 about 83; $5,000 about 93; $15,000 or more scores 100.</p>
+<h3>Momentum (40%)</h3>
+<p>The 30-day raw price change, scored from 5 (down 30% or more) through 50 (flat) to 100 (up 20% or more). Momentum is trusted only in proportion to the 30-day volume behind it: full weight at four or more recorded price-change events, scaling down linearly toward a neutral 50 at zero events. A card with no 30-day change data is scored a neutral 50, never rewarded or penalized for being unknown.</p>
+<h3>Entry (20%)</h3>
+<p>Cheaper cards score higher because a smaller stake is easier to deploy and easier to exit: $15 raw scores about 80, $40 about 60, $100 about 40, $250 about 20, $600 or more scores 5.</p>
+<div class="note"><strong>What the score is not.</strong> The weights and curves are fixed and published here; they are not tuned per card, per set, or per game, and they do not use PSA population data. A high score means the math is attractive on the inputs above. It does not know whether the card is clean, centered, or a reprint candidate. Those judgments are yours.</div>
+
+<h2 id="signal">Signals</h2>
+<p>The signal column is a plain-language label derived from the numbers above, applied in this order; the first rule that matches wins.</p>
+<table>
+<tr><th>Signal</th><th>Rule</th></tr>
+<tr><td>Crack &amp; Flip</td><td>Crack Profit on the selected basis is above $0.</td></tr>
+<tr><td>Grade Raw</td><td>Typical (PSA 9) ROI is 35% or higher.</td></tr>
+<tr><td>Strong Score</td><td>Tome Score is 75 or higher.</td></tr>
+<tr><td>Watch</td><td>Tome Score is 55 or higher.</td></tr>
+<tr><td>Skip</td><td>None of the above.</td></tr>
+</table>
+
+<h2 id="confidence">Confidence</h2>
+<p>The confidence badge says how much observed data sits behind a card's row, independent of how good the numbers look.</p>
+<table>
+<tr><th>Badge</th><th>Meaning</th></tr>
+<tr><td>High</td><td>Live PSA 9 price from JustTCG and at least four recorded price-change events in the last 30 days.</td></tr>
+<tr><td>Some</td><td>One of the two: either a live PSA 9 price or enough 30-day volume, not both.</td></tr>
+<tr><td>Thin</td><td>Neither. Graded values are estimates and momentum is running on little or no recent activity. Verify before acting.</td></tr>
+</table>
+
+<h2 id="faq">Coverage FAQ</h2>
+<div class="faq">
+<h3>Why is a card I expected not in the table?</h3>
+<p>Four reasons cover nearly every case. The card's Near Mint raw price is under $10, which is the catalog floor. The card falls outside the per-game budget (about 2,000 Pokemon, 400 Lorcana, and 500 One Piece cards per load), which happens mostly in the middle of the price range, since each game is fetched cheapest-first and priciest-first. JustTCG has no Near Mint listing for it. Or the card's most recent data looked like a stale listing and was excluded from scoring. Try the search box first; if you believe a card is missing in error, use Report an issue in the header.</p>
+<h3>Why does the Min $ filter default to $25 when the catalog starts at $10?</h3>
+<p>Below about $25, grading fees eat almost any upside and crack profits are small in dollar terms. The filter is a default, not a limit; set it to 10 to see everything the dashboard loaded.</p>
+<h3>Why do some PSA columns show "~"?</h3>
+<p>"~" means JustTCG had no graded listing for that card at that grade, so the figure is the era-calibrated estimate from the table above. PSA 10 always shows an estimate.</p>
+<h3>How fresh is what I am looking at?</h3>
+<p>Raw prices and 30-day changes: within six hours. PSA 7, 8, and 9 prices: within three days, because a third of the catalog is re-checked each morning; the banner that appears when the page loads shows the timestamp of the latest graded snapshot and how many cards in it have live pricing. PSA 10: an estimate, never live.</p>
+<h3>Why is 30d Chg blank or Volume zero on a card?</h3>
+<p>JustTCG recorded no price-change events for that card in the last 30 days. The card is scored with neutral momentum and its confidence badge drops accordingly. Zero volume usually means thin liquidity, which matters more than any score.</p>
+<h3>Which games and languages are covered?</h3>
+<p>Pokemon (US English), Disney Lorcana (English), and One Piece Card Game (English). Japanese and other-language printings are not included. Sealed product is not included.</p>
+<h3>Which grader?</h3>
+<p>PSA only. CGC, BGS, and TAG slabs trade at different levels and are not modeled.</p>
+<h3>Are Vintage and Modern the same as on the Chase Index?</h3>
+<p>Yes. Modern is XY forward; Vintage is anything before XY. Lorcana and One Piece are entirely Modern. The full boundary list is on the <a href="era-methodology.html">era methodology</a> page.</p>
+<h3>Where do My Cards live?</h3>
+<p>When you open the dashboard from the Dashboards page on read.tomecollective.com, your starred cards are saved against your subscription and follow you to any device you open it from. They are stored as card identifiers only, tied to your subscription id, never to your email. Without that link, My Cards stays in this browser only.</p>
+</div>
+
+<h2 id="track">Track record</h2>
+<p>Since September 6, 2026 the dashboard has logged every card scoring 55 or higher each morning, with its score, confidence, and raw price at the time. Once thirty days have accumulated, a "score versus what happened" panel will show how cards at each score band actually moved, and this page will be updated with the results, good or bad.</p>
+
+<div class="note">Informational only, not investment or financial advice. Prices are observed market data or published estimates; grading outcomes depend on the physical card. Verify every price before acting. TCGPlayer links on the dashboard are affiliate links; Tome Collective may earn a commission at no additional cost to you.</div>
+
+<a class="back" href="index.html">← Back to TCG Arbitrage</a>
+</div>
+</body>
+</html>
