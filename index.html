@@ -300,6 +300,19 @@ td{padding:9px 10px;vertical-align:middle;}
 }
 
 /* ── Subscriber lock panel ─────────────────────────────────────────────────── */
+.since-last{position:relative;font-size:12px;color:var(--text-2);padding:9px 34px 9px 12px;background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--gold);border-radius:6px;margin:8px 0;line-height:1.5;}
+.since-last .sl-title{font-weight:600;color:var(--text);}
+.since-last ul{margin:4px 0 0;padding-left:18px;}
+.since-last li{margin:2px 0;}
+.since-last .sl-card{color:var(--green);font-weight:600;text-decoration:none;}
+.since-last .sl-card:hover{text-decoration:underline;}
+.since-last .sl-set{color:var(--text-3);font-size:11px;}
+.since-last .sl-up{color:var(--up);font-weight:600;}
+.since-last .sl-down{color:var(--dn);font-weight:600;}
+.since-last .sl-flag{color:var(--gold);font-weight:600;}
+.since-last .sl-more{color:var(--text-3);list-style:none;margin-left:-18px;}
+.since-last .sl-close{position:absolute;top:6px;right:8px;background:none;border:0;color:var(--text-3);font-size:16px;cursor:pointer;line-height:1;}
+.since-last .sl-close:hover{color:var(--text);}
 .gcell{cursor:help;border-bottom:1px dotted transparent;}
 .gcell:hover{border-bottom-color:var(--text-3);}
 .gcell-stale{color:var(--dn);}
@@ -1137,7 +1150,7 @@ async function pushWatchlist() {
   setWatchSyncState('saving');
   try {
     const res = await proxyFetch(`${WORKER_URL}/mycards`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cards: [...WATCHLIST] }),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(WATCH_SYNC.seen ? { cards: [...WATCHLIST], seen: WATCH_SYNC.seen } : { cards: [...WATCHLIST] }),
     });
     setWatchSyncState(res.ok ? 'synced' : 'error');
   } catch (e) { setWatchSyncState('error'); }
@@ -1155,6 +1168,8 @@ async function syncWatchlist() {
     const body = await res.json();
     if (!body || body.sync !== true) { setWatchSyncState('local'); return; }
     WATCH_SYNC.enabled = true;
+    WATCH_SYNC.seen = (body.seen && typeof body.seen === 'object') ? body.seen : {};
+    WATCH_SYNC.seenLoaded = true;
     const remote = new Set(Array.isArray(body.cards) ? body.cards : []);
     // First sync on this device: union, so cards starred before sync existed are kept.
     // Every later load: the server copy wins, so a card removed on another device
@@ -1168,10 +1183,89 @@ async function syncWatchlist() {
     try { localStorage.setItem('tome_synced_sid', SUB_ID); } catch (e) {}
     if ([...WATCHLIST].sort().join(',') !== before) render();
     if ([...WATCHLIST].some(id => !remote.has(id))) await pushWatchlist(); else setWatchSyncState('synced');
+    maybeShowChanges();
   } catch (e) { setWatchSyncState('local'); }
 }
+// ── Since your last visit ────────────────────────────────────────────────────
+// The server keeps, per starred card, what the subscriber last saw (price, Tome
+// Score, signal, whether PSA data was live). On load, once both the baseline and
+// the graded snapshot are in, the current table is diffed against it and the
+// differences are shown in one dismissible strip; then the new baseline is written.
+// This is the in-dashboard half of alerts; an email digest can reuse the same diff.
+const CHANGE_PRICE_PCT = 0.10;     // price moved at least 10%
+const SCORE_BANDS = [55, 75];      // Watch / Strong Score thresholds
+let CHANGES_SHOWN = false;
+const scoreBand = (sc) => sc == null ? 0 : sc >= 75 ? 2 : sc >= 55 ? 1 : 0;
+function snapshotOf(c) {
+  return { price: c.raw, score: c.tomeScore, signal: c.signal, live: !!c.p9Live, at: new Date().toISOString().slice(0, 10) };
+}
+function diffSinceLastVisit(seen) {
+  const byId = DATA.reduce((m, c) => (m[c.id] = c, m), {});
+  const out = [];
+  let baselineCount = 0;
+  for (const id of WATCHLIST) {
+    const c = byId[id]; const was = seen[id];
+    if (!c || !was) continue;
+    baselineCount++;
+    const notes = [];
+    if (Number.isFinite(was.price) && was.price > 0 && c.raw > 0) {
+      const pct = (c.raw - was.price) / was.price;
+      if (Math.abs(pct) >= CHANGE_PRICE_PCT) notes.push({ kind: pct > 0 ? 'up' : 'down', text: (pct > 0 ? '+' : '') + Math.round(pct * 100) + '% raw (' + f$(was.price) + ' → ' + f$(c.raw) + ')' });
+    }
+    if (Number.isFinite(was.score) && c.tomeScore != null && scoreBand(c.tomeScore) !== scoreBand(was.score)) {
+      const up = scoreBand(c.tomeScore) > scoreBand(was.score);
+      notes.push({ kind: up ? 'up' : 'down', text: 'Tome Score ' + was.score + ' → ' + c.tomeScore + (up ? ' (crossed into ' : ' (dropped out of ') + (up ? (scoreBand(c.tomeScore) === 2 ? 'Strong Score' : 'Watch') : (scoreBand(was.score) === 2 ? 'Strong Score' : 'Watch')) + ')' });
+    }
+    if (was.signal && c.signal && was.signal !== c.signal) notes.push({ kind: c.signal === 'Skip' ? 'down' : 'flag', text: 'signal ' + was.signal + ' → ' + c.signal });
+    if (was.live === false && c.p9Live) notes.push({ kind: 'flag', text: 'live PSA 9 price now available (' + f$(c.p9) + ')' });
+    if (notes.length) out.push({ id, name: c.name, set: c.set, notes });
+  }
+  return { changes: out, baselineCount };
+}
+function renderChangesStrip(result, sinceDay) {
+  const host = document.querySelector('.pg-hd');
+  if (!host) return;
+  const old = document.getElementById('sinceLast'); if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'sinceLast'; el.className = 'since-last';
+  const when = sinceDay ? ' since ' + fmtDay(sinceDay) : ' since your last visit';
+  if (!result.changes.length) {
+    if (!result.baselineCount) return;   // first sync: nothing to compare yet, stay quiet
+    el.innerHTML = '<span class="sl-title">My Cards' + when + ':</span> no moves of 10% or more, no score band or signal changes. <button class="sl-close" title="Dismiss">×</button>';
+  } else {
+    const items = result.changes.slice(0, 8).map(ch =>
+      '<li><a href="#" class="sl-card" data-open="' + ch.id + '">' + ch.name + '</a>' + (ch.set ? ' <span class="sl-set">' + ch.set + '</span>' : '') + ': ' +
+      ch.notes.map(nn => '<span class="sl-' + nn.kind + '">' + nn.text + '</span>').join('; ') + '</li>').join('');
+    const more = result.changes.length > 8 ? '<li class="sl-more">and ' + (result.changes.length - 8) + ' more of your cards changed</li>' : '';
+    el.innerHTML = '<span class="sl-title">My Cards' + when + ' (' + result.changes.length + ' of ' + result.baselineCount + ' changed)</span><ul>' + items + more + '</ul><button class="sl-close" title="Dismiss">×</button>';
+  }
+  el.querySelector('.sl-close').onclick = () => el.remove();
+  el.querySelectorAll('.sl-card').forEach(a => a.onclick = (e) => { e.preventDefault(); openDrawer(a.dataset.open); });
+  host.after(el);
+}
+async function maybeShowChanges() {
+  if (CHANGES_SHOWN || !WATCH_SYNC.enabled || !WATCH_SYNC.seenLoaded || !GRADED_APPLIED) return;
+  CHANGES_SHOWN = true;
+  const seen = WATCH_SYNC.seen || {};
+  const sinceDay = Object.values(seen).map(v => v && v.at).filter(Boolean).sort().pop() || null;
+  try { renderChangesStrip(diffSinceLastVisit(seen), sinceDay); } catch (e) { console.warn('since-last-visit diff failed', e); }
+  // Write the new baseline for every starred card that is in the table.
+  const byId = DATA.reduce((m, c) => (m[c.id] = c, m), {});
+  const next = {};
+  for (const id of WATCHLIST) if (byId[id]) next[id] = snapshotOf(byId[id]);
+  WATCH_SYNC.seen = next;
+  try {
+    await proxyFetch(`${WORKER_URL}/mycards`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cards: [...WATCHLIST], seen: next }) });
+  } catch (e) {}
+}
+let GRADED_APPLIED = false;
 function toggleWatch(id) {
-  WATCHLIST.has(id) ? WATCHLIST.delete(id) : WATCHLIST.add(id);
+  const adding = !WATCHLIST.has(id);
+  adding ? WATCHLIST.add(id) : WATCHLIST.delete(id);
+  if (WATCH_SYNC.seen) {
+    if (adding) { const c = DATA.find(x => x.id === id); if (c) WATCH_SYNC.seen[id] = snapshotOf(c); }
+    else delete WATCH_SYNC.seen[id];
+  }
   saveWatchLocal();
   scheduleWatchPush();
   render();
@@ -1869,9 +1963,10 @@ document.getElementById('tbody').innerHTML =
     // there's no snapshot yet (page just stays estimate-only, same as before this
     // feature existed).
     applyGradedPriceSnapshot(CARDS).then((meta) => {
-      if (!meta) return;   // no snapshot yet (or fetch failed) — nothing to show, no note needed
+      if (!meta) { GRADED_APPLIED = true; maybeShowChanges(); return; }   // no snapshot yet — diff against estimates
       DATA = CARDS.map(compute);
       render();
+      GRADED_APPLIED = true; maybeShowChanges();
       const gradeNote = document.createElement('div');
       gradeNote.style.cssText = 'font-size:11px;color:var(--text-3);padding:6px 10px;background:var(--surface);border:0.5px solid var(--border);border-left:3px solid var(--green);border-radius:6px;margin:8px 0;';
       const asOf = meta.updatedAt ? new Date(meta.updatedAt).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : 'unknown time';
@@ -1882,6 +1977,7 @@ document.getElementById('tbody').innerHTML =
       setTimeout(() => { gradeNote.style.opacity = '0'; gradeNote.style.transition = 'opacity 1s'; setTimeout(() => gradeNote.remove(), 1200); }, 8000);
     }).catch((err) => {
       console.warn('Graded-price snapshot fetch failed:', err);
+      GRADED_APPLIED = true; maybeShowChanges();
     });
   } catch (err) {
     document.getElementById('tbody').innerHTML =
