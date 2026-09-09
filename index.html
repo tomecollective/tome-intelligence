@@ -300,6 +300,12 @@ td{padding:9px 10px;vertical-align:middle;}
 }
 
 /* ── Subscriber lock panel ─────────────────────────────────────────────────── */
+.gcell{cursor:help;border-bottom:1px dotted transparent;}
+.gcell:hover{border-bottom-color:var(--text-3);}
+.gcell-stale{color:var(--dn);}
+.gage{font-family:var(--sans);font-size:8px;font-weight:600;margin-left:2px;vertical-align:top;opacity:0.85;}
+.graded-age{font-size:11px;color:var(--text-3);margin:6px 0 0;line-height:1.45;}
+.gage-warn{color:var(--dn);font-weight:600;}
 #lockedPanel{display:none;max-width:720px;margin:2rem auto;padding:1.25rem 1.5rem;background:var(--surface);border:1px solid var(--gold);border-radius:var(--r-lg);}
 #lockedPanel .lk-title{font-size:16px;font-weight:700;color:var(--gold);margin-bottom:6px;}
 #lockedPanel p{font-size:13px;color:var(--text-2);line-height:1.55;margin:0 0 6px;}
@@ -875,17 +881,72 @@ async function loadLiveData() {
 // their era-calibrated estimate. Returns the snapshot's metadata (or null if there
 // isn't one yet — e.g. the very first day before the cron has ever run) so the
 // caller can show an honest status line either way.
+let GRADED_SNAP = { updatedAt: null, bucketDates: {}, buckets: 3 };
+// Mirrors gpBucketOf in the Worker (FNV-1a mod rotation size) so the page can map a card
+// to the day its bucket was last checked without the Worker shipping a per-card map.
+function gradedBucketOf(cardId, buckets) {
+  let h = 2166136261;
+  for (let i = 0; i < cardId.length; i++) { h ^= cardId.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0) % (buckets || 3);
+}
+const GRADED_STALE_DAYS = 4;   // rotation is 3 days; anything older means a missed run
+function daysSince(ymd) {
+  if (!ymd) return null;
+  const then = Date.parse(ymd + 'T12:00:00Z');
+  return Number.isFinite(then) ? Math.max(0, Math.round((Date.now() - then) / 86400000)) : null;
+}
+function fmtDay(ymd) {
+  if (!ymd) return '';
+  const d = new Date(ymd + 'T12:00:00Z');
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+const agoText = (days) => days == null ? '' : days === 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago';
+// Tooltip for a PSA cell: where the number came from and when it was last checked.
+function gradedTitle(c, grade) {
+  const live = c['p' + grade + 'Live'];
+  if (c.gradeAnomaly) return 'Live PSA prices for this card were out of order (a lower grade priced above a higher one), so the era-calibrated estimate is shown instead. Last checked ' + (fmtDay(c.gradedCheckedAt) || 'unknown') + '.';
+  if (live) {
+    const d = daysSince(c.gradedAt);
+    return 'Live PSA ' + grade + ' market price from JustTCG, fetched ' + fmtDay(c.gradedAt) + (d == null ? '' : ' (' + agoText(d) + ')') + (d != null && d >= GRADED_STALE_DAYS ? '. Older than the 3-day refresh rotation; a run was missed.' : '. Refreshes every 3 days.');
+  }
+  if (c.gradedCheckedAt) {
+    const d = daysSince(c.gradedCheckedAt);
+    return 'Era-calibrated estimate. JustTCG had no PSA ' + grade + ' listing for this card when it was last checked ' + fmtDay(c.gradedCheckedAt) + (d == null ? '' : ' (' + agoText(d) + ')') + '. Re-checked every 3 days.';
+  }
+  return 'Era-calibrated estimate. This card has not been checked for live PSA prices yet (first pass pending).';
+}
+function gradedAgeLine(c) {
+  const anyLive = c.p7Live || c.p8Live || c.p9Live;
+  if (c.gradeAnomaly) return 'Live PSA prices were internally inconsistent; showing estimates. Last checked ' + fmtDay(c.gradedCheckedAt) + '.';
+  if (anyLive) {
+    const d = daysSince(c.gradedAt);
+    return 'PSA prices fetched ' + fmtDay(c.gradedAt) + (d == null ? '' : ' (' + agoText(d) + ')') + (d != null && d >= GRADED_STALE_DAYS ? ' <span class="gage-warn">older than the 3-day rotation</span>' : '') + '. PSA 10 is always an estimate.';
+  }
+  if (c.gradedCheckedAt) return 'No live PSA listing found when checked ' + fmtDay(c.gradedCheckedAt) + ' (' + agoText(daysSince(c.gradedCheckedAt)) + '); all grades are era-calibrated estimates.';
+  return 'Not yet checked for live PSA prices; all grades are era-calibrated estimates.';
+}
 async function applyGradedPriceSnapshot(cards) {
   try {
     const res = await proxyFetch(`${WORKER_URL}/graded-prices`);
     if (!res.ok) return null;   // 503 = no snapshot yet; page just stays estimate-only
     const snap = await res.json();
     const byId = cards.reduce((m, c) => (m[c.id] = c, m), {});
+    // Per-card staleness. The Worker re-checks a third of the catalog each day (stable
+    // FNV-1a buckets, mirrored in gradedBucketOf), stamps each live entry with the day
+    // it was fetched (`at`), and publishes the last check date per bucket, so every
+    // card can say when its PSA prices were last looked up, live or not.
+    GRADED_SNAP = { updatedAt: snap.updatedAt || null, bucketDates: snap.bucketDates || {}, buckets: snap.rotationBuckets || 3 };
+    const snapDay = snap.updatedAt ? String(snap.updatedAt).slice(0, 10) : null;
+    for (const c of cards) {
+      c.gradedCheckedAt = GRADED_SNAP.bucketDates[gradedBucketOf(c.id, GRADED_SNAP.buckets)] || null;
+      c.gradedAt = null;
+    }
     let appliedCount = 0;
     for (const [id, g] of Object.entries(snap.data || {})) {
       const c = byId[id];
       if (!c) continue;   // snapshot may reference a card no longer in today's catalog
       appliedCount++;
+      c.gradedAt = g.at || c.gradedCheckedAt || snapDay;   // pre-stamp snapshots fall back to the bucket/snapshot day
       if (g.p7 != null) { c.p7 = g.p7; c.p7Live = true; }
       if (g.p8 != null) { c.p8 = g.p8; c.p8Live = true; }
       if (g.p9 != null) { c.p9 = g.p9; c.p9Live = true; }
@@ -1213,7 +1274,15 @@ const fPct = n => n==null ? '—' : (n>=0?'+':'-')+Math.min(Math.abs(n*100),999)
 // Grade-price cell: real JustTCG price when `live` is true, a "~"-prefixed fallback
 // estimate when not (era-calibrated multiplier — see EST). p7/p8/p9 always have one or
 // the other now; the null case is kept only as a defensive fallback, not an expected path.
-const gCell = (n, live) => n==null ? '—' : (live ? f$(n) : '~'+f$(n));
+const gCell = (n, live, title, stale) => {
+  if (n == null) return '—';
+  const txt = live ? f$(n) : '~' + f$(n);
+  if (!title) return txt;
+  const t = title.replace(/"/g, '&quot;');
+  return '<span class="gcell' + (stale ? ' gcell-stale' : '') + '" title="' + t + '">' + txt + (stale ? '<sup class="gage">' + stale + 'd</sup>' : '') + '</span>';
+};
+// Age marker shown only when live data is older than the refresh rotation.
+const gStale = (c, grade) => { if (!c['p' + grade + 'Live']) return 0; const d = daysSince(c.gradedAt); return d != null && d >= GRADED_STALE_DAYS ? d : 0; };
 const momCls = n => n==null ? 'fl' : n>.05?'up':n<-.05?'dn':'fl';
 // Plain-language explanation for the small confidence dot next to each Tome Score — see the
 // `confidence` field computed in compute() above for the exact High/Some/Thin thresholds.
@@ -1299,9 +1368,9 @@ function render() {
       <td><span class="ts-wrap"><span class="ts-pill ${tsCls(c.tomeScore)}">${c.tomeScore.toFixed(1)}</span><span class="conf-dot conf-${c.confidence}" title="Data confidence: ${c.confidence} — ${confTip(c.confidence)}"></span></span></td>
       <td><span class="sig ${s.c}">${s.i} ${c.signal}</span></td>
       <td class="mono">${f$(c.raw)}</td>
-      <td class="mono">${gCell(c.p7, c.p7Live)}</td>
-      <td class="mono">${gCell(c.p8, c.p8Live)}</td>
-      <td class="mono">${gCell(c.p9, c.p9Live)}</td>
+      <td class="mono">${gCell(c.p7, c.p7Live, gradedTitle(c, 7), gStale(c, 7))}</td>
+      <td class="mono">${gCell(c.p8, c.p8Live, gradedTitle(c, 8), gStale(c, 8))}</td>
+      <td class="mono">${gCell(c.p9, c.p9Live, gradedTitle(c, 9), gStale(c, 9))}</td>
       <td class="mono">${c.p10==null?'—':f$(c.p10)}</td>
       <td>${c.dispCrack==null?'—':`<div class="pc"><span class="pa ${pCls(c.dispCrack)}">${f$(c.dispCrack)}</span><span class="pl">vs PSA ${c.dispFrom} slab</span></div>`}</td>
       <td>${c.gradeProfitFloor==null?'—':`<div class="pc"><span class="pa ${pCls(c.gradeProfitTypical)}">${f$(c.gradeProfitFloor)} to ${f$(c.gradeProfit)}</span><span class="pl">PSA 8→10 · typical ${f$(c.gradeProfitTypical)}</span></div>`}</td>
@@ -1551,11 +1620,12 @@ async function openDrawer(id) {
     ${c.p10!=null?`
     <div style="margin:16px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Graded (PSA 7/8/9 live where available, ~ = estimate · PSA 10 est.)</div>
     <div style="display:flex;gap:8px;font-family:var(--mono);font-size:12px;">
-      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 7</div>${gCell(c.p7, c.p7Live)}</div>
-      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 8</div>${gCell(c.p8, c.p8Live)}</div>
-      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 9</div>${gCell(c.p9, c.p9Live)}</div>
+      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 7</div>${gCell(c.p7, c.p7Live, gradedTitle(c, 7), gStale(c, 7))}</div>
+      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 8</div>${gCell(c.p8, c.p8Live, gradedTitle(c, 8), gStale(c, 8))}</div>
+      <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 9</div>${gCell(c.p9, c.p9Live, gradedTitle(c, 9), gStale(c, 9))}</div>
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text-3)">PSA 10</div>${f$(c.p10)}</div>
     </div>
+    <div class="graded-age">${gradedAgeLine(c)}</div>
     <div style="margin:14px 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3)">Crack &amp; Flip</div>
     <div style="display:flex;gap:8px;font-size:12px;">
       <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px;"><div style="font-size:9px;color:var(--text-3)">via PSA 7</div><span class="mono ${pCls(c.crackP7)}">${f$(c.crackP7)}</span></div>
